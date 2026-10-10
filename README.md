@@ -72,7 +72,7 @@ reviews, opening hours, and phone numbers, are not available from the API.
 Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 This repository is automatically exported from Unmap's product monorepo, which remains the
 authoritative source during the migration. Maintainers apply accepted changes there and export
-them here. The live demo is deployed from that monorepo.
+them here. Public sync runs hourly, or on manual dispatch. The live demo is deployed from that monorepo.
 
 ## License
 
