@@ -18,6 +18,7 @@ import { RoadEventsLayer, TransitStopsLayer } from "@/components/maps/live-layer
 import { NearbyPanel } from "@/components/maps/nearby-panel";
 import { PlacePanel } from "@/components/maps/place-panel";
 import { ReachPanel } from "@/components/maps/reach-panel";
+import { ScorePanel } from "@/components/maps/score-panel";
 import { nextSheet, type SheetSize } from "@/components/maps/side-panel";
 import { EventPanel, StopPanel } from "@/components/maps/stop-event-panels";
 import { useAppState } from "@/components/maps/use-app-state";
@@ -31,6 +32,7 @@ import { cn } from "@/lib/utils";
 interface Context {
   nearLabel?: string;
   reachLabel?: string;
+  scoreLabel?: string;
 }
 
 /**
@@ -158,6 +160,12 @@ export function MapsApp() {
       replaceView({ ...view, ...(view.from ? { to: { at } } : { from: { at } }) });
       return;
     }
+    if (view.name === "score") {
+      // The check's own "check another spot": a click moves the origin, and Back returns to the last one.
+      setCtx((c) => ({ ...c, scoreLabel: "this point" }));
+      navigate({ ...view, origin: at });
+      return;
+    }
     navigate({ name: "here", at });
   };
 
@@ -165,6 +173,10 @@ export function MapsApp() {
   const reachFrom = (origin: LngLat, label: string) => {
     setCtx((c) => ({ ...c, reachLabel: label }));
     navigate({ name: "reach", origin, minutes: DEFAULT_MINUTES, mode: "pedestrian" });
+  };
+  const scoreFrom = (origin: LngLat, label: string) => {
+    setCtx((c) => ({ ...c, scoreLabel: label }));
+    navigate({ name: "score", origin, mode: "pedestrian" });
   };
   const nearbyAround = (near: LngLat, label: string, category = "food.cafe") => {
     setCtx((c) => ({ ...c, nearLabel: label }));
@@ -232,12 +244,13 @@ export function MapsApp() {
             sheet={sheet}
             onSheet={cycleSheet}
             onClose={closeView}
-            onBack={cameFrom === "nearby" || cameFrom === "reach" ? () => window.history.back() : undefined}
+            onBack={cameFrom === "nearby" || cameFrom === "reach" || cameFrom === "score" ? () => window.history.back() : undefined}
             fly={flyToPlace}
             actions={(place) => ({
               onDirections: () => directionsTo({ place: place.id }),
               onReach: () => reachFrom(place.coordinates, place.name),
               onNearby: () => nearbyAround(place.coordinates, place.name),
+              onScore: () => scoreFrom(place.coordinates, place.name),
               onShare: share,
             })}
           />
@@ -252,6 +265,7 @@ export function MapsApp() {
               onDirections: () => directionsTo({ at: view.at }),
               onReach: (label) => reachFrom(view.at, label),
               onNearby: () => nearbyAround(view.at, "this point"),
+              onScore: (label) => scoreFrom(view.at, label),
             }}
           />
         ) : null}
@@ -285,6 +299,23 @@ export function MapsApp() {
             onClose={closeView}
             onChange={(patch) => replaceView({ ...view, ...patch })}
             onOpen={(place) => navigate({ name: "place", id: place.id })}
+            padding={padding}
+          />
+        ) : null}
+        {view.name === "score" ? (
+          <ScorePanel
+            origin={view.origin}
+            originLabel={ctx.scoreLabel ?? "this point"}
+            mode={view.mode}
+            lang={prefs.lang}
+            dark={dark}
+            sheet={sheet}
+            onSheet={cycleSheet}
+            onClose={closeView}
+            onMode={(mode) => replaceView({ ...view, mode })}
+            onOpenPlace={(id) => navigate({ name: "place", id })}
+            onOpenStop={(id) => navigate({ name: "stop", id })}
+            onShare={share}
             padding={padding}
           />
         ) : null}

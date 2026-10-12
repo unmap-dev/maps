@@ -53,6 +53,7 @@ describe("describeCall", () => {
 
   it("does not mistake the nearby endpoint for a place id", () => {
     expect(describeCall(call("/places/nearby", [["category", "food.cafe"]])).title).toBe("Nearby places");
+    expect(describeCall(call("/places/nearby", [["category", "health.clinic,health.hospital"]])).sdk).toContain("nearby(['health.clinic', 'health.hospital']");
   });
 
   it("describes a style load as the Map component", () => {

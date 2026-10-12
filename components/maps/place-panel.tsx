@@ -8,6 +8,7 @@ import {
   FileTextIcon,
   Grid3x3Icon,
   InfoIcon,
+  ListChecksIcon,
   MapPinIcon,
   MountainIcon,
   NavigationIcon,
@@ -176,10 +177,11 @@ function PlaceBody({ place, ctx, lang, actions }: { place: Place; ctx: LandConte
             {category ? <span>{category}</span> : null}
           </p>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-1.5">
           <ActionButton label="Directions" primary onClick={actions.onDirections} icon={<NavigationIcon />} />
           <ActionButton label="Travel area" onClick={actions.onReach} icon={<TimerIcon />} />
           <ActionButton label="Nearby" onClick={actions.onNearby} icon={<SearchIcon />} />
+          <ActionButton label="15-min" onClick={actions.onScore} icon={<ListChecksIcon />} />
           <ActionButton label="Share" onClick={actions.onShare} icon={<Share2Icon />} />
         </div>
       </div>
@@ -222,6 +224,7 @@ export interface PlaceActions {
   onDirections: () => void;
   onReach: () => void;
   onNearby: () => void;
+  onScore: () => void;
   onShare: () => void;
 }
 

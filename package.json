@@ -1,6 +1,6 @@
 {
   "name": "unmap-maps",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "The unmap Maps web app: a familiar consumer map UI that showcases the unmap APIs",
   "scripts": {
@@ -15,12 +15,12 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
-    "@unmap/elevation": "0.20.0",
-    "@unmap/geocoding": "0.20.0",
-    "@unmap/maps": "0.20.0",
-    "@unmap/routing": "0.20.0",
-    "@unmap/sdk": "0.20.0",
-    "@unmap/themes": "0.20.0",
+    "@unmap/elevation": "0.21.0",
+    "@unmap/geocoding": "0.21.0",
+    "@unmap/maps": "0.21.0",
+    "@unmap/routing": "0.21.0",
+    "@unmap/sdk": "0.21.0",
+    "@unmap/themes": "0.21.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "geist": "^1.7.2",

@@ -223,7 +223,8 @@ export function describeCall(call: Pick<ApiCall, "method" | "path" | "params" | 
   if (path === "/places/nearby") {
     return {
       title: "Nearby places",
-      sdk: `await unmap.places.nearby(${q("category") ?? "''"}${opts([["near", get("near") ? pair(get("near")) : undefined], ["radius", n("radius")], ["limit", n("limit")], ["lang", q("lang")]])})`,
+      // Several categories ride the wire comma-joined; the SDK takes them as an array.
+      sdk: `await unmap.places.nearby(${get("category")?.includes(",") ? `[${get("category")!.split(",").map(str).join(", ")}]` : (q("category") ?? "''")}${opts([["near", get("near") ? pair(get("near")) : undefined], ["radius", n("radius")], ["limit", n("limit")], ["lang", q("lang")]])})`,
     };
   }
   if ((m = /^\/places\/([^/]+)\/feedback$/.exec(path)))
@@ -255,11 +256,13 @@ export function describeCall(call: Pick<ApiCall, "method" | "path" | "params" | 
       ["useHills", val("use_hills")],
       ["avoid", avoid ? `[${avoid}]` : undefined],
       ["truck", truck.length ? `{ ${truck.map(([k, v]) => `${k}: ${v}`).join(", ")} }` : undefined],
+      ["steps", val("steps")],
+      ["lang", val("lang") ? str(val("lang")!) : undefined],
     ]);
     return {
       title: "Route",
       sdk: `await unmap.router.route(\n  ${pair(val("from"))},\n  ${pair(val("to"))},${options ? `\n  ${options},` : ""}\n)`,
-      item: "route-line",
+      item: val("steps") === "true" ? "route-steps" : "route-line",
       note:
         mode === "auto" || mode === "truck"
           ? "use_hills is refused on driving modes: Valhalla's auto and truck costing have no grade term."

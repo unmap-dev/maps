@@ -7,6 +7,7 @@
  *   /dir/um:place:1/-114.07,51.05?mode=bicycle      directions; either end may be `_` (not set)
  *   /nearby/food.cafe/@…                            a category near the map centre
  *   /reach/-114.06,51.04?minutes=5,10,15&mode=pedestrian
+ *   /score/-114.06,51.04?mode=bicycle               the 15-minute check; walking unless `mode` says
  *   /stop/<id>/@…   /event/<id>/@…                  a transit stop, a road event
  *
  * and the display preferences ride as query parameters: `map=<style>-<light|dark>` (or a bare
@@ -35,6 +36,7 @@ export type View =
   | { name: "dir"; from: Waypoint | null; to: Waypoint | null; mode: TravelMode; hills?: number; avoid?: string[] }
   | { name: "nearby"; category: string; near?: LngLat }
   | { name: "reach"; origin: LngLat; minutes: number[]; mode: ReachMode }
+  | { name: "score"; origin: LngLat; mode: "pedestrian" | "bicycle" }
   | { name: "stop"; id: string }
   | { name: "event"; id: string };
 
@@ -179,6 +181,11 @@ export function parseUrl(pathname: string, search: string): AppState {
         view = { name: "reach", origin, minutes: parseMinutes(q.get("minutes")), mode: mode && REACH_MODES.includes(mode) ? mode : "pedestrian" };
       break;
     }
+    case "score": {
+      const origin = parseLngLat(a);
+      if (origin) view = { name: "score", origin, mode: q.get("mode") === "bicycle" ? "bicycle" : "pedestrian" };
+      break;
+    }
     case "stop":
       if (a) view = { name: "stop", id: a };
       break;
@@ -213,6 +220,10 @@ export function formatUrl({ view, camera, prefs }: AppState): string {
       path = `/reach/${formatLngLat(view.origin)}`;
       q.set("minutes", view.minutes.join(","));
       q.set("mode", view.mode);
+      break;
+    case "score":
+      path = `/score/${formatLngLat(view.origin)}`;
+      if (view.mode !== "pedestrian") q.set("mode", view.mode);
       break;
     case "stop":
       path = `/stop/${encodeURIComponent(view.id)}`;

@@ -37,6 +37,8 @@ describe("url state", () => {
     ["dir with an empty end", state({ view: { name: "dir", from: null, to: { place: "um:place:2" }, mode: "auto", avoid: ["tolls"] } })],
     ["nearby", state({ view: { name: "nearby", category: "food.cafe" } })],
     ["reach", state({ view: { name: "reach", origin: [-114.0631, 51.0443], minutes: [5, 10, 15], mode: "pedestrian" } })],
+    ["score on foot", state({ view: { name: "score", origin: [-114.0631, 51.0443], mode: "pedestrian" } })],
+    ["score by bike", state({ view: { name: "score", origin: [-73.5673, 45.5017], mode: "bicycle" } })],
     ["stop", state({ view: { name: "stop", id: "calgary-transit:6810" } })],
     ["event", state({ view: { name: "event", id: "ab511:cond-1142" } })],
     ["prefs", state({ prefs: { style: "canopy", mapMode: "dark", layers: ["transit", "treaties"], lang: "fr", inspect: false } })],
@@ -52,7 +54,9 @@ describe("url state", () => {
     expect(formatUrl(cases[0]![1])).toBe("/place/um%3Aplace%3A4471023/@51.0443,-114.0631,15z");
     expect(formatUrl(cases[2]![1])).toBe("/dir/um%3Aplace%3A1/-114.07,51.0551?mode=bicycle&hills=0.3");
     expect(formatUrl(cases[5]![1])).toBe("/reach/-114.0631,51.0443?minutes=5,10,15&mode=pedestrian");
-    expect(formatUrl(cases[8]![1])).toBe("/?map=canopy-dark&layers=transit,treaties&lang=fr&inspect=0");
+    expect(formatUrl(cases[6]![1])).toBe("/score/-114.0631,51.0443");
+    expect(formatUrl(cases[7]![1])).toBe("/score/-73.5673,45.5017?mode=bicycle");
+    expect(formatUrl(cases[10]![1])).toBe("/?map=canopy-dark&layers=transit,treaties&lang=fr&inspect=0");
   });
 
   it("ignores an invalid nearby origin", () => {
@@ -75,6 +79,11 @@ describe("url state", () => {
   it("clamps isochrone bands to the API's limits", () => {
     const v = parseUrl("/reach/-114,51", "minutes=5,500,10,0,15,20,30").view;
     expect(v).toMatchObject({ minutes: [5, 10, 15, 20] });
+  });
+
+  it("checks on foot unless the mode is a bike, since a drive is not a 15-minute city", () => {
+    expect(parseUrl("/score/-114,51", "mode=auto").view).toEqual({ name: "score", origin: [-114, 51], mode: "pedestrian" });
+    expect(parseUrl("/score/nowhere", "").view).toEqual({ name: "map" });
   });
 
   it("falls back to driving for an unknown travel mode", () => {

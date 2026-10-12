@@ -1,6 +1,6 @@
 "use client";
 
-import { CopyIcon, NavigationIcon, SearchIcon, TimerIcon } from "lucide-react";
+import { CopyIcon, ListChecksIcon, NavigationIcon, SearchIcon, TimerIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +17,7 @@ export interface HereActions {
   onDirections: (label: string) => void;
   onReach: (label: string) => void;
   onNearby: () => void;
+  onScore: (label: string) => void;
 }
 
 /**
@@ -65,6 +66,10 @@ export function HereCard({ at, lang, onClose, actions, panelOpen }: { at: LngLat
         <Button size="sm" variant="outline" onClick={actions.onNearby}>
           <SearchIcon data-icon="inline-start" />
           Nearby
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => actions.onScore(label ?? fmtCoord(at))}>
+          <ListChecksIcon data-icon="inline-start" />
+          15-min check
         </Button>
       </div>
       <Separator />

@@ -40,7 +40,7 @@ describe("panel failures", () => {
 
   it("ends the terrain loading state when elevation is unavailable", async () => {
     vi.mocked(unmap.places.get).mockResolvedValue({ data: { id: "um:place:1", name: "Test café", coordinates: [-114, 51], category: "food.cafe" } } as never);
-    render(<PlacePanel {...panel} id="um:place:1" lang="en" onLoaded={vi.fn()} actions={() => ({ onDirections: vi.fn(), onReach: vi.fn(), onNearby: vi.fn(), onShare: vi.fn() })} />);
+    render(<PlacePanel {...panel} id="um:place:1" lang="en" onLoaded={vi.fn()} actions={() => ({ onDirections: vi.fn(), onReach: vi.fn(), onNearby: vi.fn(), onScore: vi.fn(), onShare: vi.fn() })} />);
     expect(await screen.findByText("Elevation profile unavailable here.")).toBeTruthy();
     expect(screen.getByText("Some map details are unavailable")).toBeTruthy();
     expect(screen.getByText("No survey grid here")).toBeTruthy();

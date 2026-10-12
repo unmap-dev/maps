@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { ElevationProfile } from "@/components/ui/elevation-profile";
+import { RouteSteps } from "@/components/ui/route-steps";
 import { Geocoder } from "@/components/ui/geocoder";
 import { Marker } from "@/components/ui/marker-popup";
 import { RouteLine } from "@/components/ui/route-line";
@@ -150,8 +151,9 @@ export interface DirectionsProps {
 }
 
 /**
- * Directions: `router.route` for the chosen mode, drawn with the registry's route line, and an
- * elevation profile under the walking and cycling modes, where grade changes the time.
+ * Directions: `router.route` for the chosen mode, drawn with the registry's route line, its
+ * turn-by-turn steps listed with the registry's route steps in the app's language, and an elevation
+ * profile under the walking and cycling modes, where grade changes the time.
  */
 export function DirectionsPanel({ from, to, mode, hills, avoid, lang, sheet, onSheet, onClose, onChange, padding }: DirectionsProps) {
   const map = useMap();
@@ -168,13 +170,15 @@ export function DirectionsPanel({ from, to, mode, hills, avoid, lang, sheet, onS
   const grade = mode === "bicycle" || mode === "pedestrian";
   const driving = mode === "auto" || mode === "truck";
   const routeKey = pts
-    ? JSON.stringify([pts[0].at, pts[1].at, mode, grade ? hills : null, driving ? avoid : null, mode === "truck" ? truck : null])
+    ? JSON.stringify([pts[0].at, pts[1].at, mode, grade ? hills : null, driving ? avoid : null, mode === "truck" ? truck : null, lang])
     : null;
   const route = useAsync(routeKey, (signal) => {
     const [a, b] = pts!;
-    if (mode === "transit") return unmap.router.route(a.at, b.at, { mode: "transit", departAt: new Date(), signal });
+    if (mode === "transit") return unmap.router.route(a.at, b.at, { mode: "transit", departAt: new Date(), steps: true, lang, signal });
     return unmap.router.route(a.at, b.at, {
       mode,
+      steps: true,
+      lang,
       ...(grade ? { useHills: hills } : {}),
       ...(driving && avoid.length ? { avoid: avoid as ("tolls" | "highways")[] } : {}),
       ...(mode === "truck" ? { truck } : {}),
@@ -215,7 +219,7 @@ export function DirectionsPanel({ from, to, mode, hills, avoid, lang, sheet, onS
           <CloseButton onClick={onClose} label="Close directions" />
         </div>
       }
-      footer={<BuiltFrom items={grade ? ["geocoder", "route-line", "elevation-profile"] : ["geocoder", "route-line"]} />}
+      footer={<BuiltFrom items={grade ? ["geocoder", "route-line", "route-steps", "elevation-profile"] : ["geocoder", "route-line", "route-steps"]} />}
     >
       {pts ? (
         <>
@@ -309,10 +313,13 @@ export function DirectionsPanel({ from, to, mode, hills, avoid, lang, sheet, onS
                 </Alert>
               ))}
             <TransitLegs route={result} />
+            {result.steps?.length ? (
+              <RouteSteps steps={result.steps} coordinates={result.geometry.coordinates as [number, number][]} lang={lang} />
+            ) : null}
             {grade ? (
               <ElevationProfile apiKey={API_KEY} gateway={GATEWAY} line={result.geometry.coordinates as [number, number][]} lang={lang} className={cn("min-h-40")} />
             ) : null}
-            <p className="text-xs text-muted-foreground">Route preview only. Turn-by-turn instructions and alternative routes are unavailable.</p>
+            <p className="text-xs text-muted-foreground">Alternative routes are unavailable.</p>
           </>
         )}
       </div>
