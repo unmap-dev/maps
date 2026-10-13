@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname, relative } from 'node:path';
 
 const repo = process.env.PUBLIC_REPOSITORY;
-if (!['sdk-js', 'maps', 'examples'].includes(repo)) throw new Error('Set PUBLIC_REPOSITORY to sdk-js, maps, or examples');
+const repositories = ['sdk-js', 'maps', 'examples', 'store-locator', 'route-planner', 'trail-explorer', 'property-explorer', 'field-operations', 'geodata-explorer'];
+if (!repositories.includes(repo)) throw new Error(`Set PUBLIC_REPOSITORY to one of ${repositories.join(', ')}`);
 const base = 'https://cdn.unmap.dev/open-source/';
 const manifestResponse = await fetch(base + 'manifest.json', { signal: AbortSignal.timeout(30000), cache: 'no-store' });
 if (!manifestResponse.ok) throw new Error(`Source manifest returned ${manifestResponse.status}`);

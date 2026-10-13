@@ -421,7 +421,7 @@ export function isAbort(caught: unknown): boolean {
 export const PROFILE_COPY: Record<
   ProfileLang,
   Record<
-    "label" | "chart" | "empty" | "loading" | "noCoverage" | "noHeight" | "retry" | "source" | StatName | ProfileErrorKind,
+    "label" | "chart" | "empty" | "loading" | "noCoverage" | "noHeight" | "retry" | "source" | "sourceLink" | "sourceUrl" | StatName | ProfileErrorKind,
     string
   >
 > = {
@@ -433,7 +433,9 @@ export const PROFILE_COPY: Record<
     noCoverage: "No elevation data along this line.",
     noHeight: "No data",
     retry: "Retry",
-    source: "Elevation: active DEM. Supplier credits and licences: https://unmap.dev/attribution",
+    source: "Elevation by Unmap.",
+    sourceLink: "Supplier credits and licences",
+    sourceUrl: "https://unmap.dev/attribution",
     key: "The API key was refused. Check the key and its plan.",
     rateLimited: "Too many requests. Wait a moment, then retry.",
     tooLarge: "This line is too long to send in one request. Try a shorter line.",
@@ -453,8 +455,9 @@ export const PROFILE_COPY: Record<
     noCoverage: "Aucune donnée d'altitude le long de cette ligne.",
     noHeight: "Aucune donnée",
     retry: "Réessayer",
-    source:
-      "Altitude : MNA actif. Mentions et licences des fournisseurs : https://unmap.dev/fr/attribution",
+    source: "Altitude par Unmap.",
+    sourceLink: "Mentions et licences des fournisseurs",
+    sourceUrl: "https://unmap.dev/fr/attribution",
     key: "La clé API a été refusée. Vérifiez la clé et son forfait.",
     rateLimited: "Trop de requêtes. Patientez un instant, puis réessayez.",
     tooLarge: "Cette ligne est trop longue pour une seule requête. Essayez une ligne plus courte.",
@@ -523,6 +526,16 @@ export function profileChartConfig(lang: ProfileLang) {
 }
 
 // --- end profile helpers ---
+
+/**
+ * An axis tick: the value and its unit joined by a no-break space. Recharts breaks tick text at
+ * ordinary spaces whenever it measures a label as too wide, and it measures unevenly, so `1,600 m`
+ * would fall onto two lines while `2,200 m` beside it stayed on one.
+ */
+export function tickLabel(value: string): string {
+  const [number, unit] = splitUnit(value);
+  return unit ? `${number}\u00a0${unit}` : number;
+}
 
 export interface ElevationProfileProps {
   /** unmap API key. */
@@ -863,7 +876,7 @@ export function ElevationProfile({
                     tickLine={false}
                     axisLine={false}
                     minTickGap={24}
-                    tickFormatter={(value: number) => formatDistance(value, lang)}
+                    tickFormatter={(value: number) => tickLabel(formatDistance(value, lang))}
                   />
                   <YAxis
                     type="number"
@@ -871,7 +884,7 @@ export function ElevationProfile({
                     tickLine={false}
                     axisLine={false}
                     width={56}
-                    tickFormatter={(value: number) => formatElevation(value, lang)}
+                    tickFormatter={(value: number) => tickLabel(formatElevation(value, lang))}
                   />
                   <ChartTooltip
                     content={
@@ -915,7 +928,10 @@ export function ElevationProfile({
             </div>
             {/* The attribution the elevation data's licence requires. */}
             <p data-unmap-elevation-source="" className="text-xs text-muted-foreground">
-              {copy.source}
+              {copy.source}{" "}
+              <a href={copy.sourceUrl} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-foreground">
+                {copy.sourceLink}
+              </a>
             </p>
           </div>
           {loading ? (
