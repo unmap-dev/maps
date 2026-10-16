@@ -2,7 +2,7 @@
 
 A complete map app you can run, inspect, and adapt: search, place cards, directions, nearby places, travel-time areas, road events, and scheduled transit. Built with Next.js, React, MapLibre, and copied Unmap registry components.
 
-[Live app](https://maps.unmap.dev) · [Docs](https://unmap.dev/docs) · [SDK source](https://github.com/unmap-dev/sdk-js) · [Smaller examples](https://github.com/unmap-dev/examples) · [Agent prompt](AGENT_PROMPT.md)
+[Live app](https://apps.unmap.dev/maps/) · [Docs](https://unmap.dev/docs) · [SDK source](https://github.com/unmap-dev/sdk-js) · [Smaller examples](https://github.com/unmap-dev/examples) · [Agent prompt](AGENT_PROMPT.md)
 
 ## Run locally in under 60 seconds
 
@@ -23,7 +23,7 @@ pnpm dev
 
 Open **[localhost:3100](http://localhost:3100)**. You should see the Calgary map and search field. Search for **Calgary Tower**, open its place card, then request walking directions. The included worker script runs automatically before startup.
 
-The 60-second target starts with the prerequisites and key ready; a first install downloads dependencies, so network speed and hardware affect timing. Use the [live app](https://maps.unmap.dev) for an immediate preview. If pnpm is missing, enable your installed Corepack with `corepack enable`, or install `pnpm@10.29.3` through your normal Node setup.
+The 60-second target starts with the prerequisites and key ready; a first install downloads dependencies, so network speed and hardware affect timing. Use the [live app](https://apps.unmap.dev/maps/) for an immediate preview. If pnpm is missing, enable your installed Corepack with `corepack enable`, or install `pnpm@10.29.3` through your normal Node setup.
 
 ## Learn by inspecting real requests
 
@@ -110,6 +110,6 @@ The deploy script builds and invokes Wrangler; you will need your own Cloudflare
 
 ## Contributing and license
 
-See [CONTRIBUTING.md](CONTRIBUTING.md); [issues](https://github.com/unmap-dev/maps/issues) and pull requests are welcome. This repo receives verified source snapshots from Unmap's product monorepo, where maintainers backport accepted upstream changes. The sync runs hourly or on manual dispatch. Customize your own fork normally. The live Unmap demo is deployed from the product monorepo.
+See [CONTRIBUTING.md](CONTRIBUTING.md); [issues](https://github.com/unmap-dev/maps/issues) and pull requests are welcome. This repo receives verified source snapshots from Unmap's product monorepo, where maintainers backport accepted upstream changes. The sync runs hourly or on manual dispatch. Customize your own fork normally. The live app at [apps.unmap.dev/maps](https://apps.unmap.dev/maps/) is deployed from the product monorepo.
 
 Source is [MIT](LICENSE); dependencies retain their licenses. Hosted API use requires a key and follows the service terms and quotas.

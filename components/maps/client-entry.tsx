@@ -1,7 +1,7 @@
 "use client";
 
 import "@/lib/maplibre-worker";
-import { installRecorder } from "@/lib/inspector";
+import { installRecorder } from "@/lib/api-calls";
 import { GATEWAY } from "@/lib/config";
 import { MapsApp } from "@/components/maps/maps-app";
 

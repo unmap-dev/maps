@@ -9,12 +9,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Marker } from "@/components/ui/marker-popup";
 import { useMap } from "@/lib/map-context";
-import { BuiltFrom, PanelHeader, SidePanel, type SheetSize } from "@/components/maps/side-panel";
+import { CategoryChips } from "@/components/maps/floating-search";
+import { PanelHeader, SidePanel, type SheetSize } from "@/components/maps/side-panel";
 import { unmap } from "@/lib/api";
 import { categoryLabel, chipLabel } from "@/lib/categories";
 import { addressLine, fmtDistance, fmtDuration, haversine } from "@/lib/format";
 import { errorMessage, useAsync } from "@/lib/use-async";
-import type { Lang, LngLat } from "@/lib/url-state";
+import { roundLngLat, type Lang, type LngLat } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 
 const RADIUS_M = 3000;
@@ -44,6 +45,7 @@ export function NearbyPanel({
   onClose,
   onOpen,
   onSearchHere,
+  onCategory,
   padding,
 }: {
   category: string;
@@ -54,7 +56,9 @@ export function NearbyPanel({
   onSheet: () => void;
   onClose: () => void;
   onOpen: (place: Place) => void;
-  onSearchHere: () => void;
+  /** "Search this area", with the map's centre: a new screen, no longer tied to a card. */
+  onSearchHere: (near: LngLat) => void;
+  onCategory: (category: string) => void;
   padding: () => { top: number; bottom: number; left: number; right: number };
 }) {
   const map = useMap();
@@ -91,10 +95,22 @@ export function NearbyPanel({
           subtitle={places ? `${places.length} within ${fmtDistance(RADIUS_M)} · nearest first` : state.status === "error" ? "Search unavailable" : "Searching…"}
         />
       }
-      footer={<BuiltFrom items={["marker-popup"]} />}
     >
-      <div className="px-4 pb-3">
-        <Button variant="outline" onClick={onSearchHere}>Search this area</Button>
+      <div className="grid gap-3 px-4 pt-2 pb-3">
+        <CategoryChips active={category} onPick={onCategory} wrap />
+        <div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!map}
+            onClick={() => {
+              const c = map?.getCenter();
+              if (c) onSearchHere(roundLngLat([c.lng, c.lat]));
+            }}
+          >
+            Search this area
+          </Button>
+        </div>
       </div>
       {state.status === "error" ? (
         <div className="p-4">

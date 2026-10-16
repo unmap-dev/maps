@@ -3,7 +3,7 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { DirectionsPanel } from "@/components/maps/directions-panel";
-import { PlacePanel, landContext } from "@/components/maps/place-panel";
+import { PlaceOverview, landContext } from "@/components/maps/place-panel";
 import { unmap } from "@/lib/api";
 
 vi.mock("@/lib/api", () => ({ unmap: {
@@ -39,8 +39,8 @@ describe("panel failures", () => {
   });
 
   it("ends the terrain loading state when elevation is unavailable", async () => {
-    vi.mocked(unmap.places.get).mockResolvedValue({ data: { id: "um:place:1", name: "Test café", coordinates: [-114, 51], category: "food.cafe" } } as never);
-    render(<PlacePanel {...panel} id="um:place:1" lang="en" onLoaded={vi.fn()} actions={() => ({ onDirections: vi.fn(), onReach: vi.fn(), onNearby: vi.fn(), onScore: vi.fn(), onShare: vi.fn() })} />);
+    const place = { id: "um:place:1", name: "Test café", coordinates: [-114, 51], category: "food.cafe" } as never;
+    render(<PlaceOverview sheet="half" onSheet={vi.fn()} place={place} lang="en" />);
     expect(await screen.findByText("Elevation profile unavailable here.")).toBeTruthy();
     expect(screen.getByText("Some map details are unavailable")).toBeTruthy();
     expect(screen.getByText("No survey grid here")).toBeTruthy();

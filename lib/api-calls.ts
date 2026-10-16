@@ -1,15 +1,23 @@
 /**
- * The API inspector's data: every request the page makes to the gateway, recorded as it happens,
- * and the SDK call that would make it.
+ * api-calls - every request the page makes to the unmap gateway, recorded as it happens, and the
+ * SDK call that would make it.
  *
- * It records at the `fetch` level, not inside the app's own SDK instance, because half the calls
- * come from registry items (the geocoder, the elevation profile) that build their own clients.
- * What the inspector shows is therefore what really went over the wire: the real path, status and
- * latency, and the real response body. Only the SDK snippet is derived.
+ * It records at `window.fetch`, not inside one SDK instance, because a page's calls come from many
+ * clients: your own `Unmap`, and each registry item that builds its own geocoder, router or
+ * elevation client. What is recorded is what went over the wire: the real path, status, latency
+ * and response body. Only the SDK snippet is derived. The `key` query parameter is never kept.
  *
- * Tile, glyph and sprite bytes are left out: there are hundreds of them, they never touch compute,
- * and they are the map's business rather than the app's.
+ * Tile, glyph, sprite, terrain and contour bytes are left out: there are hundreds of them, they
+ * never touch compute, and they are the map's business rather than your code's.
+ *
+ * Plain TypeScript with no framework in it, and the same file in the React and Vue lanes. The
+ * `api-inspector` item renders it; `useApiCalls` in that item subscribes a component to it.
+ * Install the recorder before the map is created to see the style request the map makes first.
+ *
+ * Copied into your project by the shadcn (or shadcn-vue) CLI. Edit it freely.
  */
+
+export const DEFAULT_GATEWAY = "https://api.unmap.dev";
 
 export interface ApiCall {
   id: number;
@@ -31,56 +39,79 @@ export interface ApiCall {
 
 const SKIPPED = /^\/(tiles|glyphs|sprite|terrain|contours)\/|^\/(layers|byod)\/[^/]+\/\d+\/|^\/styles\/[^/]+\/sprite/;
 
-/** True for requests the inspector lists: gateway calls that are not tile-like bytes. */
+/** True for requests the recorder lists: gateway calls that are not tile-like bytes. */
 export function isRecorded(url: URL, gateway: URL): boolean {
   return url.origin === gateway.origin && !SKIPPED.test(url.pathname);
 }
 
-/** The query as listed: in order, `key` removed (it is shown as a header instead). */
+/** The query as listed: in order, `key` removed (curl sends it as a header instead). */
 export function visibleParams(url: URL): [string, string][] {
   return [...url.searchParams.entries()].filter(([k]) => k !== "key");
 }
 
 type Listener = (calls: readonly ApiCall[]) => void;
 const MAX_CALLS = 80;
-let calls: ApiCall[] = [];
-let seq = 0;
-const listeners = new Set<Listener>();
-let installed: (() => void) | null = null;
+const EMPTY: readonly ApiCall[] = [];
+
+interface RecorderState {
+  calls: readonly ApiCall[];
+  seq: number;
+  listeners: Set<Listener>;
+  uninstall: (() => void) | null;
+}
+
+// One recorder per page: the state lives on the global object, so a second copy of this module
+// (a hot reload, or two bundles) shares it rather than wrapping `fetch` twice.
+const STATE = Symbol.for("unmap.api-calls");
+const scope = globalThis as typeof globalThis & { [STATE]?: RecorderState };
+const state: RecorderState = (scope[STATE] ??= { calls: EMPTY, seq: 0, listeners: new Set(), uninstall: null });
 
 function emit() {
-  for (const listener of listeners) listener(calls);
+  for (const listener of state.listeners) listener(state.calls);
 }
 
 function update(id: number, patch: Partial<ApiCall>) {
-  calls = calls.map((c) => (c.id === id ? { ...c, ...patch } : c));
+  state.calls = state.calls.map((c) => (c.id === id ? { ...c, ...patch } : c));
   emit();
 }
 
+/** The calls so far, newest first. The same array until the next change. */
+export function getCalls(): readonly ApiCall[] {
+  return state.calls;
+}
+
+/** Calls `listener` now and after every change. Returns the unsubscribe function. */
 export function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  listener(calls);
-  return () => listeners.delete(listener);
+  state.listeners.add(listener);
+  listener(state.calls);
+  return () => {
+    state.listeners.delete(listener);
+  };
 }
 
 export function clearCalls() {
-  calls = [];
+  state.calls = EMPTY;
   emit();
 }
 
-/** Wrap `window.fetch` once. Returns an uninstall function (used by tests). */
-export function installRecorder(gatewayUrl: string): () => void {
-  if (installed || typeof window === "undefined") return installed ?? (() => {});
+/**
+ * Wrap `window.fetch` once, recording calls to `gatewayUrl`'s origin. Safe to call on every render
+ * and on the server: after the first call, and wherever there is no `window`, it does nothing.
+ * Returns the uninstall function (for tests).
+ */
+export function installRecorder(gatewayUrl: string = DEFAULT_GATEWAY): () => void {
+  if (state.uninstall) return state.uninstall;
+  if (typeof window === "undefined" || typeof window.fetch !== "function") return () => {};
   const gateway = new URL(gatewayUrl);
-  const original = window.fetch.bind(window);
-  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const original = window.fetch;
+  const recording = async (input: RequestInfo | URL, init?: RequestInit) => {
     let url: URL;
     try {
       url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, window.location.href);
     } catch {
-      return original(input, init);
+      return original.call(window, input, init);
     }
-    if (!isRecorded(url, gateway)) return original(input, init);
+    if (!isRecorded(url, gateway)) return original.call(window, input, init);
     const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
     let body: unknown;
     if (typeof init?.body === "string") {
@@ -90,11 +121,11 @@ export function installRecorder(gatewayUrl: string): () => void {
         body = undefined;
       }
     }
-    const call: ApiCall = { id: ++seq, method, path: url.pathname, params: visibleParams(url), body, startedAt: performance.now(), status: null, ms: null };
-    calls = [call, ...calls].slice(0, MAX_CALLS);
+    const call: ApiCall = { id: ++state.seq, method, path: url.pathname, params: visibleParams(url), body, startedAt: performance.now(), status: null, ms: null };
+    state.calls = [call, ...state.calls].slice(0, MAX_CALLS);
     emit();
     try {
-      const res = await original(input, init);
+      const res = await original.call(window, input, init);
       const ms = Math.round(performance.now() - call.startedAt);
       update(call.id, { status: res.status, ms });
       if ((res.headers.get("content-type") ?? "").includes("json")) {
@@ -111,11 +142,12 @@ export function installRecorder(gatewayUrl: string): () => void {
       throw error;
     }
   };
-  installed = () => {
-    window.fetch = original;
-    installed = null;
+  window.fetch = recording;
+  state.uninstall = () => {
+    if (window.fetch === recording) window.fetch = original;
+    state.uninstall = null;
   };
-  return installed;
+  return state.uninstall;
 }
 
 /** Calls started within this window of each other are shown as one parallel group. */
@@ -127,7 +159,7 @@ export interface CallGroup {
   ms: number | null;
 }
 
-/** Newest first, as `calls` is. */
+/** Newest first, as `getCalls()` is. */
 export function groupCalls(list: readonly ApiCall[]): CallGroup[] {
   const groups: CallGroup[] = [];
   for (const call of list) {
@@ -151,7 +183,7 @@ export function groupCalls(list: readonly ApiCall[]): CallGroup[] {
 export interface CallDescription {
   /** Human name for the call, e.g. "Autocomplete". */
   title: string;
-  /** The `@unmap/sdk` call that makes this request. */
+  /** The `@unmap/sdk` call that makes this request (for a style, the map component). */
   sdk: string;
   /** The registry item that makes or draws it, when one does. */
   item?: string;
@@ -186,7 +218,11 @@ const ROAD_METHODS: Record<string, [string, string]> = {
   "/road-conditions": ["conditions", "Road conditions"],
 };
 
-export function describeCall(call: Pick<ApiCall, "method" | "path" | "params" | "body">): CallDescription {
+/**
+ * The title, SDK line, registry item and note for a call. `lane` picks how a style load is
+ * written: `<Map apiKey={key} style=…>` for React, `<UnmapMap :api-key="key" map-style=…>` for Vue.
+ */
+export function describeCall(call: Pick<ApiCall, "method" | "path" | "params" | "body">, lane: "react" | "vue" = "react"): CallDescription {
   const p = new Map(call.params);
   const get = (k: string) => p.get(k);
   const q = (k: string) => (get(k) != null ? str(get(k)!) : undefined);
@@ -300,9 +336,15 @@ export function describeCall(call: Pick<ApiCall, "method" | "path" | "params" | 
   if ((m = /^\/styles\/([^/]+?)(\.json)?$/.exec(path))) {
     const style = m[1]!;
     const mode = get("mode");
+    const lang = get("lang");
+    const overlays = get("overlays")?.split(",");
+    const sdk =
+      lane === "vue"
+        ? `<UnmapMap :api-key="key" map-style=${JSON.stringify(style)}${mode ? ` mode=${JSON.stringify(mode)}` : ""}${lang ? ` lang=${JSON.stringify(lang)}` : ""}${overlays ? ` :overlays="[${overlays.map(str).join(", ")}]"` : ""} />`
+        : `<Map apiKey={key} style=${JSON.stringify(style)}${mode ? ` mode=${JSON.stringify(mode)}` : ""}${lang ? ` lang=${JSON.stringify(lang)}` : ""}${overlays ? ` overlays={${JSON.stringify(overlays)}}` : ""} />`;
     return {
       title: "Map style",
-      sdk: `<Map apiKey={key} style=${JSON.stringify(style)}${mode ? ` mode=${JSON.stringify(mode)}` : ""}${get("lang") ? ` lang=${JSON.stringify(get("lang"))}` : ""}${get("overlays") ? ` overlays={${JSON.stringify(get("overlays")!.split(","))}}` : ""} />`,
+      sdk,
       item: "map",
       note: "Changing style, mode or language swaps the style in place: the camera, markers and your own layers stay.",
     };
@@ -311,9 +353,9 @@ export function describeCall(call: Pick<ApiCall, "method" | "path" | "params" | 
 }
 
 /** The same request as curl, with the key as a header so it is never pasted into a shell history. */
-export function curlOf(call: Pick<ApiCall, "method" | "path" | "params" | "body">, gateway: string): string {
+export function curlOf(call: Pick<ApiCall, "method" | "path" | "params" | "body">, gateway: string = DEFAULT_GATEWAY): string {
   const query = new URLSearchParams(call.params).toString().replace(/%2C/g, ",").replace(/%7C/g, "|");
-  const url = `${gateway}${call.path}${query ? `?${query}` : ""}`;
+  const url = `${gateway.replace(/\/+$/, "")}${call.path}${query ? `?${query}` : ""}`;
   const lines = [`curl ${call.method !== "GET" ? `-X ${call.method} ` : ""}"${url}"`, `  -H "Authorization: Bearer $UNMAP_API_KEY"`];
   if (call.body !== undefined) lines.push(`  -H "Content-Type: application/json"`, `  -d '${JSON.stringify(call.body)}'`);
   return lines.join(" \\\n");

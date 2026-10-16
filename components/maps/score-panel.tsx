@@ -29,7 +29,7 @@ import { GeoJSONLayer } from "@/components/ui/geojson-layer";
 import { Marker } from "@/components/ui/marker-popup";
 import { chartRamp } from "@/lib/map-layers";
 import { useMap } from "@/lib/map-context";
-import { BuiltFrom, PanelHeader, SidePanel, type SheetSize } from "@/components/maps/side-panel";
+import { PanelHeader, SidePanel, type SheetSize } from "@/components/maps/side-panel";
 import { unmap } from "@/lib/api";
 import { fmtDistance } from "@/lib/format";
 import { bboxOf } from "@/lib/geo";
@@ -132,7 +132,6 @@ export function ScorePanel({
       sheet={sheet}
       onSheet={onSheet}
       header={<PanelHeader onClose={onClose} title="15-minute check" subtitle={`Everyday essentials within a 15-minute ${verb} of ${originLabel}.`} />}
-      footer={<BuiltFrom items={["geojson-layer", "marker-popup"]} />}
     >
       <Marker lngLat={origin} />
       {data?.features.length ? (

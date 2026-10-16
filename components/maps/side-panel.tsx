@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { ArrowLeftIcon, BlocksIcon, XIcon } from "lucide-react";
+import { createContext, useContext, type ReactNode } from "react";
+import { ArrowLeftIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -10,8 +10,15 @@ export type SheetSize = "peek" | "half" | "full";
 export const nextSheet = (s: SheetSize): SheetSize => (s === "peek" ? "half" : s === "half" ? "full" : "peek");
 
 /**
- * The left panel: a card beside the map on desktop, a bottom sheet on phones. Its content scrolls;
- * the header and footer stay put.
+ * The header of the card a panel is a tab of (a place, a dropped pin). Inside it, a panel shows
+ * that card's name and tabs above its own content and keeps only its own subtitle: the card
+ * already says what the screen is and has the close button.
+ */
+export const PanelSlot = createContext<ReactNode>(null);
+
+/**
+ * A screen's panel. On a phone it is a bottom sheet over the map; on a desktop it fills the
+ * sidebar under the search box. Its content scrolls; the header and footer stay put.
  */
 export function SidePanel({
   label,
@@ -26,27 +33,27 @@ export function SidePanel({
   header?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
-  /** Sit at the top edge (directions replaces the search box, as in Google Maps). */
+  /** Covers the search box on a phone (directions replaces it, as in Google Maps). */
   flush?: boolean;
   sheet: SheetSize;
   onSheet: () => void;
 }) {
+  const card = useContext(PanelSlot);
   return (
     <section
       aria-label={label}
       data-map-panel=""
       data-sheet={sheet}
       className={cn(
-        "absolute z-20 flex flex-col overflow-hidden bg-card text-card-foreground shadow-lg ring-1 ring-foreground/10",
-        "inset-x-0 bottom-0 rounded-t-2xl",
-        sheet === "peek" ? "max-h-36" : sheet === "full" ? (flush ? "max-h-[calc(100%-1rem)]" : "max-h-[calc(100%-7rem)]") : "max-h-[55%]",
-        "lg:inset-x-auto lg:bottom-auto lg:left-4 lg:w-[400px] lg:rounded-xl",
-        flush ? "lg:top-4 lg:max-h-[calc(100%-2rem)]" : "lg:top-[4.75rem] lg:max-h-[calc(100%-5.75rem)]",
+        "absolute inset-x-0 bottom-0 z-20 flex flex-col overflow-hidden rounded-t-2xl bg-card text-card-foreground shadow-lg ring-1 ring-foreground/10",
+        sheet === "peek" ? "max-h-36" : sheet === "full" ? (flush ? "max-h-[calc(100%-1rem)]" : "max-h-[calc(100%-5rem)]") : "max-h-[55%]",
+        "lg:static lg:max-h-none lg:min-h-0 lg:flex-1 lg:rounded-none lg:bg-transparent lg:shadow-none lg:ring-0",
       )}
     >
       <Button variant="ghost" onClick={onSheet} aria-label={sheet === "full" ? "Collapse panel" : "Expand panel"} className="h-8 w-full shrink-0 lg:hidden">
         <span className="h-1 w-10 rounded-full bg-border" />
       </Button>
+      {card}
       {header}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
       {footer}
@@ -54,23 +61,17 @@ export function SidePanel({
   );
 }
 
-/** Which registry items a panel is built from: the showcase's whole point, said once per panel. */
-export function BuiltFrom({ items }: { items: string[] }) {
-  return (
-    <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-t px-4 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] text-xs text-muted-foreground">
-      <BlocksIcon className="size-3.5" aria-hidden />
-      <span>Built from</span>
-      {items.map((item) => (
-        <code key={item} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
-          @unmap/{item}
-        </code>
-      ))}
-    </div>
-  );
-}
-
-/** A panel's title row with a close button. */
+/** A panel's title row with a close button; inside a card's tab, its subtitle alone. */
 export function PanelHeader({ title, subtitle, onClose, onBack, children }: { title?: ReactNode; subtitle?: ReactNode; onClose: () => void; onBack?: () => void; children?: ReactNode }) {
+  const inCard = useContext(PanelSlot) != null;
+  if (inCard) {
+    return subtitle || children ? (
+      <div className="shrink-0 px-4 pt-3 pb-1">
+        {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
+        {children}
+      </div>
+    ) : null;
+  }
   return (
     <div className="flex shrink-0 items-start gap-2 px-4 pt-3 pb-2 lg:pt-4">
       {onBack ? <BackButton onClick={onBack} /> : null}

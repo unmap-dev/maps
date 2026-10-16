@@ -18,6 +18,7 @@ const eslintConfig = defineConfig([
     "components/ui/**",
     "lib/map-context.tsx",
     "lib/map-layers.ts",
+    "lib/api-calls.ts",
   ]),
 ]);
 

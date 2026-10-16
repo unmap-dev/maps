@@ -9,7 +9,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Marker } from "@/components/ui/marker-popup";
 import { Row } from "@/components/maps/place-panel";
-import { BuiltFrom, PanelHeader, SidePanel, type SheetSize } from "@/components/maps/side-panel";
+import { PanelHeader, SidePanel, type SheetSize } from "@/components/maps/side-panel";
 import { eventCache, stopCache } from "@/components/maps/live-layers";
 import { unmap } from "@/lib/api";
 import { errorMessage, useAsync } from "@/lib/use-async";
@@ -49,7 +49,6 @@ export function StopPanel({
       sheet={sheet}
       onSheet={onSheet}
       header={<PanelHeader onClose={onClose} title={stop?.name ?? "Transit stop"} subtitle={stop ? `Stop${stop.code ? ` ${stop.code}` : ""} · ${stop.feed}` : undefined} />}
-      footer={<BuiltFrom items={["marker-popup"]} />}
     >
       {stop ? <Marker lngLat={stop.coordinates} /> : null}
       <div className="grid gap-3 px-4 pb-4">
@@ -159,7 +158,6 @@ export function EventPanel({ id, near, sheet, onSheet, onClose }: { id: string; 
       sheet={sheet}
       onSheet={onSheet}
       header={<PanelHeader onClose={onClose} title={event ? (event.headline ?? `${TYPE_LABEL[event.type] ?? "Road event"}${event.roads[0] ? ` · ${event.roads[0].name}` : ""}`) : "Road event"} subtitle={event ? `${TYPE_LABEL[event.type]} · ${event.source}` : undefined} />}
-      footer={<BuiltFrom items={["geojson-layer"]} />}
     >
       {at ? <Marker lngLat={at} /> : null}
       <div className="grid gap-3 px-4 pb-4">

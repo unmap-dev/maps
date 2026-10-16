@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_PREFS, formatUrl, parseUrl, roundLngLat, type AppState } from "@/lib/url-state";
+import { DEFAULT_PREFS, formatUrl, parseUrl, roundLngLat, stripBase, withBase, type AppState } from "@/lib/url-state";
 
 const state = (partial: Partial<AppState>): AppState => ({ view: { name: "map" }, camera: null, prefs: { ...DEFAULT_PREFS }, ...partial });
 
@@ -43,12 +43,20 @@ describe("url state", () => {
     ["event", state({ view: { name: "event", id: "ab511:cond-1142" } })],
     ["prefs", state({ prefs: { style: "canopy", mapMode: "dark", layers: ["transit", "treaties"], lang: "fr", inspect: false } })],
     ["nearby with its original search point", state({ view: { name: "nearby", category: "food.cafe", near: [-73.5673, 45.5017] }, camera: { lng: -73.58, lat: 45.52, zoom: 15 } })],
+    ["nearby as a place's tab", state({ view: { name: "nearby", category: "food.cafe", near: [-114.0631, 51.0443], of: "um:place:4471023" } })],
+    ["reach as a dropped pin's tab", state({ view: { name: "reach", origin: [-114.0702, 51.0478], minutes: [5, 10, 15], mode: "pedestrian", of: "pin" } })],
+    ["score as a place's tab", state({ view: { name: "score", origin: [-114.0631, 51.0443], mode: "bicycle", of: "um:place:1" } })],
   ];
   for (const [name, s] of cases) {
     it(`round-trips ${name}`, () => {
       expect(roundTrip(s).back).toEqual(s);
     });
   }
+
+  it("drops an `of` that is not a place id or pin", () => {
+    expect(parseUrl("/score/-114.06,51.04", "of=%3Cscript%3E").view).toEqual({ name: "score", origin: [-114.06, 51.04], mode: "pedestrian" });
+    expect(formatUrl(state({ view: { name: "nearby", category: "food.cafe", near: [-114.0631, 51.0443], of: "um:place:1" } }))).toBe("/nearby/food.cafe?near=-114.0631,51.0443&of=um%3Aplace%3A1");
+  });
 
   it("writes the shapes people recognise", () => {
     expect(formatUrl(cases[0]![1])).toBe("/place/um%3Aplace%3A4471023/@51.0443,-114.0631,15z");
@@ -88,5 +96,16 @@ describe("url state", () => {
 
   it("falls back to driving for an unknown travel mode", () => {
     expect(parseUrl("/dir/_/_", "mode=teleport").view).toMatchObject({ mode: "auto" });
+  });
+
+  it("lives under a base path when apps.unmap.dev serves it at /maps", () => {
+    expect(stripBase("/maps/place/um%3Aplace%3A1/@51.04,-114.06,15z", "/maps")).toBe("/place/um%3Aplace%3A1/@51.04,-114.06,15z");
+    expect(stripBase("/maps/", "/maps")).toBe("/");
+    expect(stripBase("/maps", "/maps")).toBe("/");
+    expect(stripBase("/place/x", "")).toBe("/place/x");
+    expect(withBase("/place/x/@51,-114,13z?lang=fr", "/maps")).toBe("/maps/place/x/@51,-114,13z?lang=fr");
+    expect(withBase("/?map=outdoor", "/maps")).toBe("/maps/?map=outdoor");
+    expect(withBase("/", "/maps")).toBe("/maps/");
+    expect(withBase("/", "")).toBe("/");
   });
 });

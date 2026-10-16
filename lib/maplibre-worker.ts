@@ -9,5 +9,6 @@
  * Imported for its side effect before the first map is created.
  */
 import { maplibregl } from "@unmap/maps";
+import { BASE_PATH } from "@/lib/config";
 
-maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
+maplibregl.setWorkerUrl(`${BASE_PATH}/maplibre/maplibre-gl-worker.mjs`);

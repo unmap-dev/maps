@@ -33,7 +33,7 @@ import { Geocoder } from "@/components/ui/geocoder";
 import { Marker } from "@/components/ui/marker-popup";
 import { RouteLine } from "@/components/ui/route-line";
 import { useMap } from "@/lib/map-context";
-import { BuiltFrom, CloseButton, SidePanel, type SheetSize } from "@/components/maps/side-panel";
+import { CloseButton, SidePanel, type SheetSize } from "@/components/maps/side-panel";
 import { unmap } from "@/lib/api";
 import { API_KEY, GATEWAY } from "@/lib/config";
 import { fmtCoord, fmtDistance, fmtDuration } from "@/lib/format";
@@ -219,7 +219,6 @@ export function DirectionsPanel({ from, to, mode, hills, avoid, lang, sheet, onS
           <CloseButton onClick={onClose} label="Close directions" />
         </div>
       }
-      footer={<BuiltFrom items={grade ? ["geocoder", "route-line", "route-steps", "elevation-profile"] : ["geocoder", "route-line", "route-steps"]} />}
     >
       {pts ? (
         <>

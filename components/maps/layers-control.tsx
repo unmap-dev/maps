@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { Lang, MapMode, Prefs } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
+import { ON_MAP_BUTTON } from "./on-map";
 
 /** Overlays the layers sheet offers: two app layers fed by data endpoints, then catalog overlays. */
 export const OVERLAYS: { id: string; label: string; detail: string; addon?: string }[] = [
@@ -42,9 +43,19 @@ function Swatch({ style, dark, className }: { style: string; dark: boolean; clas
   );
 }
 
+/** Floats on the map, so it takes the on-map surface (see on-map.ts). */
 export function LayersButton({ className }: { className?: string }) {
   return (
-    <SheetTrigger render={<Button variant="outline" size="lg" className={className} />} aria-label="Map styles and layers">
+    <SheetTrigger
+      render={
+        <Button
+          variant="outline"
+          size="lg"
+          className={cn(ON_MAP_BUTTON, className)}
+        />
+      }
+      aria-label="Map styles and layers"
+    >
       <LayersIcon data-icon="inline-start" />
       Layers
     </SheetTrigger>

@@ -33,15 +33,15 @@ function ThemeButton() {
 }
 
 /**
- * The search box: the registry geocoder in a floating card, as in Google Maps. A place result
- * opens its card; any other result (an address, a street, a town) opens "what's here" on it.
+ * The search box: the registry geocoder, as in Google Maps. On a phone it floats over the top of
+ * the map; on a desktop it heads the sidebar. A place result opens its card; any other result (an
+ * address, a street, a town) opens "what's here" on it.
  */
-export function FloatingSearch({ lang, onResult, onDirections }: { lang: Lang; onResult: (r: GeocodeResult) => void; onDirections: () => void }) {
+export function SearchBox({ lang, onResult, onDirections }: { lang: Lang; onResult: (r: GeocodeResult) => void; onDirections: () => void }) {
   return (
-    <div className="absolute inset-x-4 top-4 z-30 lg:right-auto lg:w-[400px]">
-      <Card data-search-card="" className="gap-0 py-1.5">
-        <CardHeader className="sr-only"><CardTitle>Search the map</CardTitle></CardHeader>
-        <CardContent className="flex items-center gap-1 px-1.5">
+    <Card data-search-card="" className="absolute inset-x-3 top-3 z-30 gap-0 py-1.5 shadow-lg lg:static lg:shrink-0 lg:rounded-none lg:border-b lg:py-2 lg:shadow-none lg:ring-0">
+      <CardHeader className="sr-only"><CardTitle>Search the map</CardTitle></CardHeader>
+      <CardContent className="flex items-center gap-1 px-1.5">
         <Geocoder
           apiKey={API_KEY}
           gateway={GATEWAY}
@@ -55,29 +55,33 @@ export function FloatingSearch({ lang, onResult, onDirections }: { lang: Lang; o
           <NavigationIcon />
         </Button>
         <ThemeButton />
-        </CardContent>
-      </Card>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
-/** Category chips: one tap is a `places.nearby` call around the map centre. */
-export function CategoryChips({ active, onPick, className }: { active: string | null; onPick: (category: string) => void; className?: string }) {
+/**
+ * Category chips: one tap is a `places.nearby` call. `wrap` lays them out in rows, for the
+ * sidebar and the Nearby tab; without it they are one row that scrolls sideways over the map.
+ */
+export function CategoryChips({ active, onPick, wrap, className }: { active: string | null; onPick: (category: string) => void; wrap?: boolean; className?: string }) {
   return (
-    <div className={cn("absolute z-20 overflow-x-auto p-1 [scrollbar-width:none]", className)}>
-      <Card className="w-max gap-0 py-1">
-      <CardHeader className="sr-only"><CardTitle>Nearby categories</CardTitle></CardHeader>
-      <CardContent className="px-1">
-      <ToggleGroup value={active ? [active] : []} onValueChange={(values) => onPick(values[0] ?? active!)} aria-label="Nearby categories">
-      {CHIPS.map(({ id, label, icon: Icon }) => (
-        <ToggleGroupItem key={id} value={id} className="shrink-0">
-          <Icon data-icon="inline-start" />
-          {label}
-        </ToggleGroupItem>
-      ))}
+    <div className={cn(wrap ? "" : "overflow-x-auto p-1 [scrollbar-width:none]", className)}>
+      <ToggleGroup
+        variant="outline"
+        size="sm"
+        value={active ? [active] : []}
+        onValueChange={(values) => onPick(values[0] ?? active!)}
+        aria-label="Nearby categories"
+        className={cn(wrap ? "w-full flex-wrap" : "w-max")}
+      >
+        {CHIPS.map(({ id, label, icon: Icon }) => (
+          <ToggleGroupItem key={id} value={id} className={cn("shrink-0 rounded-full", !wrap && "bg-background shadow-sm")}>
+            <Icon data-icon="inline-start" />
+            {label}
+          </ToggleGroupItem>
+        ))}
       </ToggleGroup>
-      </CardContent>
-      </Card>
     </div>
   );
 }

@@ -8,6 +8,8 @@
  *   /nearby/food.cafe/@…                            a category near the map centre
  *   /reach/-114.06,51.04?minutes=5,10,15&mode=pedestrian
  *   /score/-114.06,51.04?mode=bicycle               the 15-minute check; walking unless `mode` says
+ *   …?of=um:place:123   …?of=pin                    a nearby, reach or score screen opened as a tab
+ *                                                   of a place card, or of a dropped pin at its origin
  *   /stop/<id>/@…   /event/<id>/@…                  a transit stop, a road event
  *
  * and the display preferences ride as query parameters: `map=<style>-<light|dark>` (or a bare
@@ -29,14 +31,21 @@ export const REACH_MODES: readonly ReachMode[] = ["pedestrian", "bicycle", "auto
 /** One end of a route: a place by id, or a bare point. */
 export type Waypoint = { place: string } | { at: LngLat };
 
+/**
+ * What a nearby, reach or score screen was opened from, when it was opened as a tab of a card:
+ * a place id, or `"pin"` for a dropped pin at the screen's own origin. Absent for a screen opened
+ * on its own (a category chip, a transit stop's travel area).
+ */
+export type Of = string;
+
 export type View =
   | { name: "map" }
   | { name: "place"; id: string }
   | { name: "here"; at: LngLat }
   | { name: "dir"; from: Waypoint | null; to: Waypoint | null; mode: TravelMode; hills?: number; avoid?: string[] }
-  | { name: "nearby"; category: string; near?: LngLat }
-  | { name: "reach"; origin: LngLat; minutes: number[]; mode: ReachMode }
-  | { name: "score"; origin: LngLat; mode: "pedestrian" | "bicycle" }
+  | { name: "nearby"; category: string; near?: LngLat; of?: Of }
+  | { name: "reach"; origin: LngLat; minutes: number[]; mode: ReachMode; of?: Of }
+  | { name: "score"; origin: LngLat; mode: "pedestrian" | "bicycle"; of?: Of }
   | { name: "stop"; id: string }
   | { name: "event"; id: string };
 
@@ -99,6 +108,11 @@ function parseWaypoint(s: string | undefined): Waypoint | null {
   if (!s || s === "_") return null;
   const at = parseLngLat(s);
   return at ? { at } : { place: s };
+}
+
+/** `of=` → a place id or `pin`; anything else is dropped rather than trusted. */
+function parseOf(s: string | null): { of?: Of } {
+  return s && /^[\w:.-]{1,200}$/.test(s) ? { of: s } : {};
 }
 
 const formatWaypoint = (w: Waypoint | null) => (!w ? "_" : "at" in w ? formatLngLat(w.at) : encodeURIComponent(w.place));
@@ -171,19 +185,19 @@ export function parseUrl(pathname: string, search: string): AppState {
     case "nearby":
       if (a && /^[a-z_]+(\.[a-z_]+)?$/.test(a)) {
         const near = parseLngLat(q.get("near") ?? undefined);
-        view = { name: "nearby", category: a, ...(near ? { near } : {}) };
+        view = { name: "nearby", category: a, ...(near ? { near } : {}), ...parseOf(q.get("of")) };
       }
       break;
     case "reach": {
       const origin = parseLngLat(a);
       const mode = q.get("mode") as ReachMode | null;
       if (origin)
-        view = { name: "reach", origin, minutes: parseMinutes(q.get("minutes")), mode: mode && REACH_MODES.includes(mode) ? mode : "pedestrian" };
+        view = { name: "reach", origin, minutes: parseMinutes(q.get("minutes")), mode: mode && REACH_MODES.includes(mode) ? mode : "pedestrian", ...parseOf(q.get("of")) };
       break;
     }
     case "score": {
       const origin = parseLngLat(a);
-      if (origin) view = { name: "score", origin, mode: q.get("mode") === "bicycle" ? "bicycle" : "pedestrian" };
+      if (origin) view = { name: "score", origin, mode: q.get("mode") === "bicycle" ? "bicycle" : "pedestrian", ...parseOf(q.get("of")) };
       break;
     }
     case "stop":
@@ -215,15 +229,18 @@ export function formatUrl({ view, camera, prefs }: AppState): string {
     case "nearby":
       path = `/nearby/${view.category}`;
       if (view.near) q.set("near", formatLngLat(view.near));
+      if (view.of) q.set("of", view.of);
       break;
     case "reach":
       path = `/reach/${formatLngLat(view.origin)}`;
       q.set("minutes", view.minutes.join(","));
       q.set("mode", view.mode);
+      if (view.of) q.set("of", view.of);
       break;
     case "score":
       path = `/score/${formatLngLat(view.origin)}`;
       if (view.mode !== "pedestrian") q.set("mode", view.mode);
+      if (view.of) q.set("of", view.of);
       break;
     case "stop":
       path = `/stop/${encodeURIComponent(view.id)}`;
@@ -240,6 +257,22 @@ export function formatUrl({ view, camera, prefs }: AppState): string {
   if (prefs.inspect != null) q.set("inspect", prefs.inspect ? "1" : "0");
   const query = q.toString().replace(/%2C/g, ",");
   return (path || "/") + (query ? `?${query}` : "");
+}
+
+/**
+ * The app's own path inside the base path it is served under: `/maps/place/x` → `/place/x` when
+ * apps.unmap.dev builds it with `BASE_PATH=/maps`. With no base path (`pnpm dev`, your own deploy)
+ * the path is unchanged.
+ */
+export function stripBase(pathname: string, base: string): string {
+  if (!base) return pathname;
+  if (pathname === base) return "/";
+  return pathname.startsWith(`${base}/`) ? pathname.slice(base.length) : pathname;
+}
+
+/** A `formatUrl` result under the base path; the root keeps its slash (`/maps/`), as the export serves it. */
+export function withBase(url: string, base: string): string {
+  return base ? `${base}${url}` : url;
 }
 
 /** Whether two views are the same screen, so moving between them replaces history rather than pushing. */

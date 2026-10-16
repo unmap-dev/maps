@@ -14,7 +14,7 @@ import { GeoJSONLayer } from "@/components/ui/geojson-layer";
 import { Marker } from "@/components/ui/marker-popup";
 import { chartRamp } from "@/lib/map-layers";
 import { useMap } from "@/lib/map-context";
-import { BuiltFrom, PanelHeader, SidePanel, type SheetSize } from "@/components/maps/side-panel";
+import { PanelHeader, SidePanel, type SheetSize } from "@/components/maps/side-panel";
 import { unmap } from "@/lib/api";
 import { CHIPS, categoryLabel } from "@/lib/categories";
 import { fmtDistance, haversine } from "@/lib/format";
@@ -101,7 +101,6 @@ export function ReachPanel({
       sheet={sheet}
       onSheet={onSheet}
       header={<PanelHeader onClose={onClose} title="Travel-time area" subtitle={`Explore what you can reach from ${originLabel}.`} />}
-      footer={<BuiltFrom items={["geojson-layer", "marker-popup"]} />}
     >
       <Marker lngLat={origin} />
       {features.length ? (

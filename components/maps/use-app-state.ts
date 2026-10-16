@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { formatUrl, parseUrl, sameView, type AppState, type Camera, type Prefs, type View } from "@/lib/url-state";
+import { BASE_PATH } from "@/lib/config";
+import { formatUrl, parseUrl, sameView, stripBase, withBase, type AppState, type Camera, type Prefs, type View } from "@/lib/url-state";
 
 /**
  * App state, kept in the URL.
@@ -12,12 +13,12 @@ import { formatUrl, parseUrl, sameView, type AppState, type Camera, type Prefs, 
  * the map owns it, and this only writes it into the URL when the map settles.
  */
 export function useAppState() {
-  const [state, setState] = useState<AppState>(() => parseUrl(window.location.pathname, window.location.search));
+  const [state, setState] = useState<AppState>(() => parseUrl(stripBase(window.location.pathname, BASE_PATH), window.location.search));
   const stateRef = useRef(state);
   const cameraRef = useRef<Camera | null>(state.camera);
 
   const write = useCallback((next: AppState, push: boolean) => {
-    const url = formatUrl({ ...next, camera: cameraRef.current });
+    const url = withBase(formatUrl({ ...next, camera: cameraRef.current }), BASE_PATH);
     if (url === window.location.pathname + window.location.search) return;
     if (push) window.history.pushState(null, "", url);
     else window.history.replaceState(null, "", url);
@@ -65,7 +66,7 @@ export function useAppState() {
 
   useEffect(() => {
     const onPop = () => {
-      const next = parseUrl(window.location.pathname, window.location.search);
+      const next = parseUrl(stripBase(window.location.pathname, BASE_PATH), window.location.search);
       stateRef.current = next;
       if (next.camera) cameraRef.current = next.camera;
       setState(next);
@@ -75,7 +76,7 @@ export function useAppState() {
   }, []);
 
   /** The shareable URL of what is on screen now. */
-  const shareUrl = useCallback(() => window.location.origin + formatUrl({ ...stateRef.current, camera: cameraRef.current }), []);
+  const shareUrl = useCallback(() => window.location.origin + withBase(formatUrl({ ...stateRef.current, camera: cameraRef.current }), BASE_PATH), []);
 
   return { state, go, replaceView, setPrefs, setCamera, cameraRef, shareUrl };
 }
