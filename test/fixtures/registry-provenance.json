@@ -3,7 +3,7 @@
   "files": {
     "lib/map-context.tsx": "cd5d7ddc18a72e6dff67769b6aa919dd20ff56b518fc098d8ba173c0dbc43c0e",
     "lib/map-layers.ts": "a537271e0d0b67c9c5eb9dabfa2d8801892c35ea00b760f597b3602e4c978c59",
-    "components/ui/map.tsx": "570bbb2b2ba1c735dc01be05882efb8b2890119e6cfcbeeec0ccf77f0d19b66c",
+    "components/ui/map.tsx": "3e830ed97277ebfb49ace12a06349db9ce6c66835e8f20938d630e334d4ddc4d",
     "components/ui/map-controls.tsx": "d0d2e1132b8bcc24aa0b08851f34268476b78cc340b9a351c46fb855b2448cf8",
     "components/ui/geocoder.tsx": "938abb0915722e865223614b098682e729b89b1113eaeef508a03bd14084465d",
     "components/ui/marker-popup.tsx": "73da0fc3e23e2a808786bb5d1e93701972e05a6a425fec7e0b7a7820d2f8215b",
