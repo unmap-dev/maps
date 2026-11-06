@@ -344,6 +344,7 @@ export function MapsApp() {
           position="bottom-right"
           locate
           compass
+          terrain
           className="bottom-[var(--map-controls-bottom)] right-[var(--map-controls-right)]"
           onLocate={(loc) => setCamera({ lng: loc.lngLat[0], lat: loc.lngLat[1], zoom: 15 })}
         /> : null}
