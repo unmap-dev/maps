@@ -1,5 +1,17 @@
 # @unmap/maps-app
 
+## 0.0.13
+
+### Patch Changes
+
+- Updated dependencies [8e01899]
+  - @unmap/maps@0.30.0
+  - @unmap/sdk@0.30.0
+  - @unmap/geocoding@0.30.0
+  - @unmap/routing@0.30.0
+  - @unmap/elevation@0.30.0
+  - @unmap/themes@0.30.0
+
 ## 0.0.12
 
 ### Patch Changes
