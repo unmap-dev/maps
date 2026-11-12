@@ -20,7 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="h-dvh overflow-hidden antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        {/* The same key as the starter apps (packages/app-kit COLOR_MODE_KEY): one origin, one choice. */}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="unmap-color-mode" disableTransitionOnChange>
           <Toaster>{children}</Toaster>
         </ThemeProvider>
       </body>
