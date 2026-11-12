@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { BlocksIcon, ChevronDownIcon, ChevronUpIcon, CodeIcon, CopyIcon, InfoIcon, PanelRightOpenIcon } from "lucide-react";
+import { useMemo, useState, type CSSProperties } from "react";
+import { BlocksIcon, CodeIcon, CopyIcon, InfoIcon, PanelRightOpenIcon, XIcon } from "lucide-react";
 import { ApiInspector, useApiCalls } from "@/components/ui/api-inspector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { abridge, clearCalls, curlOf, describeCall, type ApiCall } from "@/lib/api-calls";
 import { copyText } from "@/lib/clipboard";
 import { barOf, burstsOf, type Burst } from "@/lib/timeline";
@@ -132,13 +133,46 @@ function CallDetail({ call, siblings, gateway, show, onShow, onSelect }: { call:
 }
 
 /**
- * Every request the page makes, along the bottom of the map. Closed, it is one line: the count and
- * the SDK call behind the newest request. Open, it draws each action's calls on a timeline, so
- * calls that ran together read as parallel bars, with the SDK line, curl or response of the one you
- * pick. Built on the `api-inspector` item's `useApiCalls()`; the item itself opens as the full
- * inspector beside it.
+ * The button under the map controls that opens the requests panel: the request count rides on it
+ * as a badge, so the page shows it is recording without a bar across the map.
  */
-export function RequestsDrawer({ gateway, open, onOpenChange, height, className }: { gateway: string; open: boolean; onOpenChange: (open: boolean) => void; height: number; className?: string }) {
+export function RequestsButton({ gateway, open, onOpenChange, className }: { gateway: string; open: boolean; onOpenChange: (open: boolean) => void; className?: string }) {
+  const calls = useApiCalls(gateway);
+  const label = `${open ? "Close" : "Open"} the requests panel, ${calls.length} ${calls.length === 1 ? "request" : "requests"}`;
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label={label}
+            aria-pressed={open}
+            className={cn("relative bg-popover text-popover-foreground shadow-sm hover:bg-muted dark:bg-popover dark:hover:bg-muted aria-pressed:bg-muted aria-pressed:text-foreground", className)}
+            onClick={() => onOpenChange(!open)}
+          >
+            <CodeIcon />
+            {calls.length > 0 ? (
+              <Badge aria-hidden className="pointer-events-none absolute -top-2 -right-2 h-4 min-w-4 px-1 text-[10px] tabular-nums">
+                {calls.length > 99 ? "99+" : calls.length}
+              </Badge>
+            ) : null}
+          </Button>
+        }
+      />
+      <TooltipContent side="left">Requests</TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * Every request the page makes, in a panel that floats above the map once its button is pressed.
+ * Each action's calls are drawn on a timeline, so calls that ran together read as parallel bars,
+ * with the SDK line, curl or response of the one you pick. Built on the `api-inspector` item's
+ * `useApiCalls()`; the item itself opens as the full inspector beside it.
+ */
+export function RequestsDrawer({ gateway, onOpenChange, height, className, style }: { gateway: string; onOpenChange: (open: boolean) => void; height: number; className?: string; style?: CSSProperties }) {
   const calls = useApiCalls(gateway);
   const bursts = useMemo(() => burstsOf(calls), [calls]);
   const [picked, setPicked] = useState<number | null>(null);
@@ -151,46 +185,29 @@ export function RequestsDrawer({ gateway, open, onOpenChange, height, className 
   // Bars for calls still in flight run to now; this is read when the calls change.
   // eslint-disable-next-line react-hooks/purity
   const now = typeof performance === "undefined" ? 0 : performance.now();
-  // The newest SDK call on one line: multi-line calls fold their arguments in.
-  const latest = newest ? describeCall(newest).sdk.replace(/\s*\n\s*/g, " ").replace(/\(\s+/g, "(").replace(/,?\s+\)/g, ")") : null;
 
   return (
     <section
       aria-label="Requests"
       data-requests-drawer=""
       className={cn("flex flex-col overflow-hidden rounded-xl bg-card text-card-foreground shadow-lg ring-1 ring-foreground/10", className)}
-      style={{ height: open ? height : 40 }}
+      style={{ ...style, height }}
     >
-      <div className={cn("flex h-10 shrink-0 items-center gap-2 pr-1.5 pl-4", open && "border-b")}>
+      <div className="flex h-11 shrink-0 items-center gap-2 border-b pr-1.5 pl-4">
         <CodeIcon className="size-4" aria-hidden />
         <h2 className="text-sm font-medium">Requests</h2>
         <Badge variant="secondary" className="tabular-nums">{calls.length}</Badge>
-        {open ? (
-          <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">Every call this page made to unmap. Tiles, glyphs and sprites are not listed.</p>
-        ) : (
-          <p className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{latest ?? "No requests yet"}</p>
-        )}
-        {open ? (
-          <>
-            <Button variant="ghost" size="sm" onClick={clearCalls} disabled={!calls.length}>Clear</Button>
-            <Button variant="ghost" size="sm" onClick={() => setFull(true)}>
-              <PanelRightOpenIcon data-icon="inline-start" />
-              Full inspector
-            </Button>
-          </>
-        ) : latest ? (
-          <Button variant="ghost" size="sm" onClick={() => copyText(describeCall(newest!).sdk, "SDK call copied")}>
-            <CopyIcon data-icon="inline-start" />
-            Copy SDK call
-          </Button>
-        ) : null}
-        <Button variant="outline" size="sm" aria-expanded={open} onClick={() => onOpenChange(!open)}>
-          {open ? "Close" : "Open"}
-          {open ? <ChevronDownIcon data-icon="inline-end" /> : <ChevronUpIcon data-icon="inline-end" />}
+        <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">Every call this page made to unmap. Tiles, glyphs and sprites are not listed.</p>
+        <Button variant="ghost" size="sm" onClick={clearCalls} disabled={!calls.length}>Clear</Button>
+        <Button variant="ghost" size="sm" onClick={() => setFull(true)}>
+          <PanelRightOpenIcon data-icon="inline-start" />
+          Full inspector
+        </Button>
+        <Button variant="ghost" size="icon-sm" aria-label="Close the requests panel" onClick={() => onOpenChange(false)}>
+          <XIcon />
         </Button>
       </div>
-      {open ? (
-        bursts.length === 0 ? (
+      {bursts.length === 0 ? (
           <Empty>
             <EmptyHeader>
               <EmptyTitle>No requests yet</EmptyTitle>
@@ -206,8 +223,7 @@ export function RequestsDrawer({ gateway, open, onOpenChange, height, className 
             </div>
             {selected ? <CallDetail call={selected} siblings={siblings} gateway={gateway} show={show} onShow={setShow} onSelect={setPicked} /> : null}
           </div>
-        )
-      ) : null}
+        )}
       <ApiInspector gateway={gateway} open={full} onOpenChange={setFull} side="right" className="sm:max-w-md" />
     </section>
   );

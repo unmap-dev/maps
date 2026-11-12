@@ -120,3 +120,51 @@
 [data-unmap-geocoder] > p {
   @apply sr-only;
 }
+
+/* The search field spans the whole card and runs under its search icon and directions button
+   (floating-search.tsx), so the suggestion list, which is anchored to the field, is exactly as wide
+   as the card. */
+[data-search-card] [data-slot="input-group"] {
+  border-width: 0;
+}
+/* The geocoder hides the combobox trigger, which leaves an empty addon narrowing the input. */
+[data-search-card] [data-slot="input-group-addon"]:empty {
+  display: none;
+}
+[data-search-card] [data-slot="input-group"] input {
+  padding-left: 2.5rem;
+  padding-right: 3.625rem;
+}
+
+/* Search suggestions draw their own row (floating-search.tsx, through the geocoder's
+   `renderResult`), and the search box marks its list `data-search-popup` (useSearchPopupMark), so
+   these hold while it is loading or empty too. The list is flush with the card's sides. On a phone it floats 0.25rem under the
+   card; on a desktop it hangs just under the card's bottom rule, square on top, over the sidebar. Both
+   offsets assume the combobox's 6px sideOffset and the card's py-1.5 / lg:py-2. Rows are
+   evenly padded, five fit, and the check mark for the last place picked is hidden. */
+[data-slot="combobox-content"][data-search-popup] {
+  width: var(--anchor-width);
+  min-width: var(--anchor-width);
+  margin-top: 0.25rem;
+}
+@media (min-width: 1024px) {
+  [data-slot="combobox-content"][data-search-popup] {
+    margin-top: 3px;
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  }
+}
+[data-slot="combobox-content"][data-search-popup] [data-slot="combobox-list"] {
+  padding: 0.25rem 0.375rem 0.375rem;
+  max-height: min(22rem, calc(var(--available-height) - 1rem));
+}
+[data-slot="combobox-item"]:has(> [data-search-result]) {
+  padding: 0.375rem 0.625rem 0.375rem 0.375rem;
+  border-radius: calc(var(--radius) - 2px);
+}
+[data-slot="combobox-item"]:has(> [data-search-result]) > :not([data-search-result]) {
+  display: none;
+}
+[data-slot="combobox-item"][data-highlighted] [data-search-icon] {
+  background: var(--background);
+  color: var(--foreground);
+}

@@ -2,7 +2,7 @@
   "registry": "https://registry.unmap.dev",
   "files": {
     "lib/map-context.tsx": "f94acb29e21cc8d14066daddaffc7c6d0aeeb5ce2a6a38a197913694300dc1dc",
-    "lib/map-layers.ts": "a537271e0d0b67c9c5eb9dabfa2d8801892c35ea00b760f597b3602e4c978c59",
+    "lib/map-layers.ts": "ffccaa866ec528c38483f0d8b2cd3be624e01434500d1391045ccdd800b6324e",
     "components/ui/map.tsx": "f7b78f35539bb2c8d5271e463118283bd46c2d4473707a0d583eba65ba8c9481",
     "components/ui/map-controls.tsx": "ccc3426afad65cdbfac92f094a3bfcaf3431ea0056a450791758c1b529ec6c81",
     "components/ui/geocoder.tsx": "938abb0915722e865223614b098682e729b89b1113eaeef508a03bd14084465d",
@@ -19,6 +19,7 @@
     "components/ui/button-group.tsx": "fe5b34be03fca98f52debed8889c7256fa6e102ca66fe0d05cc532cee3981d71",
     "components/ui/card.tsx": "4442c75caf2dcd6c7ff92867f7a3cc48c5b9cf7e27fbaff328f144b4db688942",
     "components/ui/chart.tsx": "994e720a206e32c57458c9e7fc99a90ef8cbda75a42c0350d38e3883d8ef53ef",
+    "components/ui/collapsible.tsx": "ead4349ff7b01d696ef89294a81d18ee1d3f732321398896462c834ab9b9e065",
     "components/ui/combobox.tsx": "6017a0a7da02f914016e4eaf81974a62a14ad57fa3d99f90fe4a7600de567d3a",
     "components/ui/empty.tsx": "6cec69a1f29bd692b62d82899911b9ccc2890a863ac0b35c711218982055d793",
     "components/ui/field.tsx": "48c093a17462877a88ab905a5f19451a307a9229942db3058f6d8f38240e781c",

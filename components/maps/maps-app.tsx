@@ -2,10 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type MutableRefObject } from "react";
 import { useTheme } from "next-themes";
-import { CodeIcon } from "lucide-react";
 import type { GeocodeResult, Place } from "@unmap/geocoding";
-import { ApiInspector, useApiCalls } from "@/components/ui/api-inspector";
-import { Button } from "@/components/ui/button";
+import { ApiInspector } from "@/components/ui/api-inspector";
 import { Sheet } from "@/components/ui/sheet";
 import { Map, type MapViewport } from "@/components/ui/map";
 import { MapControls } from "@/components/ui/map-controls";
@@ -13,23 +11,26 @@ import { useMap } from "@/lib/map-context";
 import { DirectionsPanel, waypointOf } from "@/components/maps/directions-panel";
 import { CategoryChips, SearchBox } from "@/components/maps/floating-search";
 import { PointOverview } from "@/components/maps/here-card";
-import { LayersButton, LayersSheet, catalogOverlays } from "@/components/maps/layers-control";
+import { LayersButton, LayersSheet } from "@/components/maps/layers-control";
 import { RoadEventsLayer, TransitStopsLayer } from "@/components/maps/live-layers";
 import { NearbyPanel } from "@/components/maps/nearby-panel";
 import { PlaceOverview } from "@/components/maps/place-panel";
 import { ReachPanel } from "@/components/maps/reach-panel";
 import { ScorePanel } from "@/components/maps/score-panel";
-import { RequestsDrawer } from "@/components/maps/requests-drawer";
+import { RequestsButton, RequestsDrawer } from "@/components/maps/requests-drawer";
 import { nextSheet, type SheetSize } from "@/components/maps/side-panel";
 import { SubjectPanel, subjectKey, type Subject, type SubjectContent, type SubjectTab } from "@/components/maps/subject-panel";
 import { EventPanel, StopPanel } from "@/components/maps/stop-event-panels";
 import { useAppState } from "@/components/maps/use-app-state";
 import { useChromeLayout } from "@/lib/chrome-layout";
 import { copyText } from "@/lib/clipboard";
+import { toast } from "@/components/ui/toast";
+import { unmap } from "@/lib/api";
+import { catalogOverlays, overlayLabel } from "@/lib/layer-catalog";
+import { useAsync } from "@/lib/use-async";
 import { API_KEY, DEFAULT_CAMERA, GATEWAY } from "@/lib/config";
 import { DEFAULT_MINUTES, roundLngLat, type LngLat, type View, type Waypoint } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
-import { ON_MAP_BUTTON } from "@/components/maps/on-map";
 
 /** Whatever a screen needs that the URL does not carry: the name to show for a point, where a list came from. */
 interface Context {
@@ -73,15 +74,38 @@ function subjectOf(view: View): { subject: Subject; tab: SubjectTab } | null {
 const ofSubject = (s: Subject) => ("place" in s ? s.place : "pin");
 const waypointOfSubject = (s: Subject): Waypoint => ("place" in s ? { place: s.place } : { at: s.at });
 
-/** The request count on a phone, where the drawer would cover the sheet: it opens the inspector. */
-function RequestsButton({ onOpen }: { onOpen: () => void }) {
-  const calls = useApiCalls(GATEWAY);
-  return (
-    <Button variant="outline" size="lg" className={cn(ON_MAP_BUTTON, "shadow-md")} onClick={onOpen} aria-label={`Open the API inspector, ${calls.length} requests`}>
-      <CodeIcon data-icon="inline-start" />
-      <span className="tabular-nums">{calls.length}</span>
-    </Button>
-  );
+/** A style the gateway refused (400 or 403), with the overlays it asked for. */
+interface StyleRefusal {
+  status: number;
+  overlays: string[];
+}
+
+/**
+ * Hears a style the gateway refused. An overlay the key has no add-on for is a 403 for the whole
+ * style, and an unknown one a 400, either of which leaves MapLibre with no style at all; the app
+ * takes the overlay back out so the map draws again.
+ */
+function StyleRefusals({ onRefused }: { onRefused: (refusal: StyleRefusal) => void }) {
+  const map = useMap();
+  const onRefusedRef = useRef(onRefused);
+  useEffect(() => {
+    onRefusedRef.current = onRefused;
+  });
+  useEffect(() => {
+    if (!map) return;
+    const handler = (e: { error: unknown }) => {
+      // MapLibre's AJAXError carries the status and the URL it fetched.
+      const { status, url } = (e.error ?? {}) as { status?: number; url?: string };
+      if ((status !== 400 && status !== 403) || !url || !url.includes("/styles/")) return;
+      const overlays = new URL(url).searchParams.get("overlays")?.split(",").filter(Boolean) ?? [];
+      if (overlays.length) onRefusedRef.current({ status, overlays });
+    };
+    map.on("error", handler);
+    return () => {
+      map.off("error", handler);
+    };
+  }, [map]);
+  return null;
 }
 
 /**
@@ -147,6 +171,27 @@ export function MapsApp() {
   const root = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapInstance>(null);
   const [layersOpen, setLayersOpen] = useState(false);
+  // The layer catalog loads the first time the Layers sheet opens, or at once when the URL already
+  // asks for a catalog overlay, and is kept from then on. A failed load retries on the next open.
+  const [catalogTry, setCatalogTry] = useState(() => (catalogOverlays(state.prefs.layers).length ? 1 : 0));
+  const catalog = useAsync(catalogTry ? `catalog:${catalogTry}` : null, () => unmap.layers.list());
+  const catalogLayers = catalog.status === "done" ? catalog.data : null;
+  const onLayersOpen = (open: boolean) => {
+    if (open && (catalogTry === 0 || catalog.status === "error")) setCatalogTry((n) => n + 1);
+    setLayersOpen(open);
+  };
+  const onStyleRefused = ({ status, overlays }: StyleRefusal) => {
+    // The newest overlay is the likeliest cause; a second refusal takes the next one out.
+    const id = [...overlays].reverse().find((o) => prefs.layers.includes(o));
+    if (!id) return;
+    setPrefs({ layers: prefs.layers.filter((l) => l !== id) });
+    const name = overlayLabel(id, catalogLayers, prefs.lang);
+    toast.add(
+      status === 403
+        ? { title: `${name} is turned off`, description: "This API key does not include the add-on that layer needs.", type: "error" }
+        : { title: `${name} is turned off`, description: "The gateway does not know that layer.", type: "error" },
+    );
+  };
   const [ctx, setCtx] = useState<Context>({});
 
   // Each new screen opens its sheet half-way: the size is remembered per screen.
@@ -179,11 +224,14 @@ export function MapsApp() {
   const pinLabel = cardKey && ctx.pin?.key === cardKey ? ctx.pin.label : null;
 
   const { desktop, height, panelHeight } = useChromeLayout(root, viewKey, sheet);
-  const drawerOpen = desktop && prefs.inspect === true;
-  const drawerHeight = Math.round(Math.min(320, height * 0.42));
-  // What the requests drawer covers along the bottom of a desktop map, with its margin.
-  const drawerCover = (drawerOpen ? drawerHeight : 40) + 12;
-  const coveredBottom = desktop ? drawerCover : panelHeight;
+  const inspectOpen = prefs.inspect === true;
+  const drawerOpen = desktop && inspectOpen;
+  const drawerHeight = Math.round(Math.min(340, height * 0.42));
+  // On a desktop the requests panel floats in the bottom-right corner, beside the controls, only
+  // while it is open; on a phone the bottom sheet is what covers the map.
+  const coveredBottom = desktop ? (drawerOpen ? drawerHeight + 12 : 0) : panelHeight;
+  // The requests button sits under the map controls, clear of the attribution on a desktop.
+  const requestsBottom = desktop ? 36 : panelHeight + 32;
   const hideMapControls = !desktop && panelOpen && sheet === "full";
   const chrome: Padding = {
     top: desktop || view.name === "dir" ? 16 : view.name === "map" ? 112 : 72,
@@ -318,7 +366,10 @@ export function MapsApp() {
 
   return (
     <div ref={root} className="relative h-dvh w-full overflow-hidden" style={{
-      "--map-controls-bottom": `${coveredBottom + (desktop ? 12 : 32)}px`,
+      "--map-requests-bottom": `${requestsBottom}px`,
+      // The controls stand on the requests button: its 32 px and an 8 px gap.
+      "--map-controls-bottom": `${requestsBottom + 40}px`,
+      "--map-layers-bottom": `${desktop ? 36 : panelHeight + 32}px`,
       "--map-controls-right": "12px",
     } as CSSProperties}>
       <Map
@@ -337,6 +388,7 @@ export function MapsApp() {
       >
         <MapHandle mapRef={mapRef} />
         <MapEvents onClick={onMapClick} camera={state.camera} />
+        <StyleRefusals onRefused={onStyleRefused} />
         <ChromePadding padding={chrome} />
         <TransitStopsLayer enabled={prefs.layers.includes("transit")} dark={dark} onPick={(stop) => navigate({ name: "stop", id: stop.id })} />
         <RoadEventsLayer enabled={prefs.layers.includes("roads")} dark={dark} onPick={(event) => navigate({ name: "event", id: event.id })} />
@@ -348,6 +400,14 @@ export function MapsApp() {
           className="bottom-[var(--map-controls-bottom)] right-[var(--map-controls-right)]"
           onLocate={(loc) => setCamera({ lng: loc.lngLat[0], lat: loc.lngLat[1], zoom: 15 })}
         /> : null}
+        {!hideMapControls ? (
+          <RequestsButton
+            gateway={GATEWAY}
+            open={inspectOpen}
+            onOpenChange={(open) => setPrefs({ inspect: open })}
+            className="absolute right-3 bottom-[var(--map-requests-bottom)] z-[5]"
+          />
+        ) : null}
 
         {/* One sidebar on a desktop: search, then the screen. On a phone its parts float apart:
             search over the top of the map, the screen as a sheet from the bottom. */}
@@ -420,25 +480,24 @@ export function MapsApp() {
           {view.name === "event" ? <EventPanel id={view.id} near={[(state.camera ?? initial).lng, (state.camera ?? initial).lat]} sheet={sheet} onSheet={cycleSheet} onClose={closeView} /> : null}
         </div>
 
-        <Sheet open={layersOpen} onOpenChange={setLayersOpen}>
-          <div className={cn("absolute bottom-[var(--map-controls-bottom)] left-3 z-20 flex gap-2", panelOpen && "lg:left-[calc(424px+0.75rem)]", !panelOpen && "lg:left-3", hideMapControls && "hidden")}>
-            <LayersButton className="shadow-md" />
-            {!desktop ? <RequestsButton onOpen={() => setPrefs({ inspect: true })} /> : null}
+        <Sheet open={layersOpen} onOpenChange={onLayersOpen}>
+          <div className={cn("absolute bottom-[var(--map-layers-bottom)] left-3 z-20 flex gap-2", panelOpen && "lg:left-[calc(424px+0.75rem)]", !panelOpen && "lg:left-3", hideMapControls && "hidden")}>
+            <LayersButton style={prefs.style} dark={dark} count={prefs.layers.length} />
           </div>
-          <LayersSheet prefs={prefs} dark={dark} desktop={desktop} onChange={setPrefs} />
+          <LayersSheet prefs={prefs} dark={dark} catalog={catalog} desktop={desktop} onChange={setPrefs} />
         </Sheet>
 
-        {desktop ? (
+        {drawerOpen ? (
           <RequestsDrawer
             gateway={GATEWAY}
-            open={drawerOpen}
             onOpenChange={(open) => setPrefs({ inspect: open })}
             height={drawerHeight}
-            className={cn("absolute right-3 bottom-3 z-30", panelOpen ? "left-[calc(424px)]" : "left-3")}
+            // Beside the controls column (12 px margin, 32 px buttons, 12 px gap), never over the sidebar.
+            className="absolute right-14 bottom-3 z-30"
+            style={{ width: `min(60rem, calc(100% - ${panelOpen ? SIDEBAR + 12 : 12}px - 3.5rem))` }}
           />
-        ) : (
-          <ApiInspector gateway={GATEWAY} open={prefs.inspect === true} side="bottom" onOpenChange={(open) => setPrefs({ inspect: open })} />
-        )}
+        ) : null}
+        {!desktop ? <ApiInspector gateway={GATEWAY} open={inspectOpen} side="bottom" onOpenChange={(open) => setPrefs({ inspect: open })} /> : null}
       </Map>
     </div>
   );

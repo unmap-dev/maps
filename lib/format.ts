@@ -1,4 +1,5 @@
-export const fmtDistance = (m: number) => (m < 950 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(m < 9950 ? 1 : 0)} km`);
+export const fmtDistance = (m: number) =>
+  m < 950 ? `${Math.round(m / 10) * 10} m` : m < 9950 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m / 1000).toLocaleString("en-CA")} km`;
 
 export function fmtDuration(s: number): string {
   const m = Math.max(1, Math.round(s / 60));
