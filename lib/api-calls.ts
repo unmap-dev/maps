@@ -253,7 +253,7 @@ export function describeCall(call: Pick<ApiCall, "method" | "path" | "params" | 
     return {
       title: "Identify",
       sdk: `await unmap.identify({\n  at: ${pair(get("at"))},${layers ? `\n  layers: [${layers}],` : ""}\n})`,
-      note: get("layers")?.includes("survey.") ? "Survey layers need the legal-land add-on: a key without it gets 403 for the whole request, so ask for them separately." : undefined,
+      note: get("layers")?.includes("mining.") ? "Mining layers need the Mining add-on: a key without it gets 403 for the whole request, so ask for them separately." : undefined,
     };
   }
   if (path === "/places/nearby") {

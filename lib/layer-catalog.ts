@@ -43,9 +43,7 @@ export const catalogOverlays = (layers: string[]) => layers.filter((l) => !APP_L
 /** Group order and names. A capability missing here still shows, after these, under its own id. */
 const GROUPS: { addon: LayerCapability | null; en: string; fr: string }[] = [
   { addon: null, en: "Boundaries", fr: "Limites" },
-  { addon: "legalLand", en: "Legal land", fr: "Terres légales" },
   { addon: "agriculture", en: "Agriculture", fr: "Agriculture" },
-  { addon: "energy", en: "Energy", fr: "Énergie" },
   { addon: "mining", en: "Mining", fr: "Mines" },
   { addon: "remote", en: "Remote", fr: "Régions éloignées" },
   { addon: "ski", en: "Ski", fr: "Ski" },

@@ -6,7 +6,6 @@ import {
   ClockIcon,
   CopyIcon,
   FileTextIcon,
-  Grid3x3Icon,
   InfoIcon,
   MapPinIcon,
   MountainIcon,
@@ -43,23 +42,19 @@ export interface LandContext {
   where: IdentifyResponse | null;
   /** The nearest address or place, with treaty context. */
   near: GeocodeResult | null;
-  /** Survey grid at the point; `"addon"` when the key lacks the legal-land add-on. */
-  survey: IdentifyResponse | "addon" | null;
 }
 
-/** Everything known about a point: five calls, run in parallel. */
+/** Everything known about a point: four calls, run in parallel. */
 export async function landContext(at: LngLat, lang: Lang, signal: AbortSignal): Promise<LandContext> {
-  const [section, timezone, where, near, survey] = await Promise.allSettled([
+  const [section, timezone, where, near] = await Promise.allSettled([
     unmap.elevation.get(sectionLine(at), { signal }),
     unmap.timezone.lookup(at, { signal }),
     unmap.identify({ at, layers: ["municipalities"], signal }),
     unmap.geocoder.reverse(at[0], at[1], { lang, limit: 1, include: ["treaties"], signal }),
-    // Separate on purpose: a key without the add-on gets 403 for the whole request.
-    unmap.identify({ at, layers: ["survey.dls"], signal }),
   ]);
   const values = section.status === "fulfilled" ? section.value : null;
-  const labels = ["Elevation", "Time zone", "Municipality", "Nearby address", "Legal land grid"];
-  const unavailable = [section, timezone, where, near, survey].flatMap((result, i) => result.status === "rejected" && !(i === 4 && (result.reason as { status?: number })?.status === 403) ? [labels[i]!] : []);
+  const labels = ["Elevation", "Time zone", "Municipality", "Nearby address"];
+  const unavailable = [section, timezone, where, near].flatMap((result, i) => result.status === "rejected" ? [labels[i]!] : []);
   return {
     unavailable,
     section: values,
@@ -67,7 +62,6 @@ export async function landContext(at: LngLat, lang: Lang, signal: AbortSignal): 
     timezone: timezone.status === "fulfilled" ? timezone.value : null,
     where: where.status === "fulfilled" ? where.value : null,
     near: near.status === "fulfilled" ? (near.value[0] ?? null) : null,
-    survey: survey.status === "fulfilled" ? survey.value : (survey.reason as { status?: number })?.status === 403 ? "addon" : null,
   };
 }
 
@@ -105,11 +99,10 @@ export function Row({ icon, children, action }: { icon: ReactNode; children: Rea
 
 const Sub = ({ children }: { children: ReactNode }) => <span className="block text-xs text-muted-foreground">{children}</span>;
 
-/** Rows for the land a point sits on: municipality, treaty, survey grid, elevation, time zone. */
+/** Rows for the land a point sits on: elevation, time zone, municipality, treaty. */
 export function LandRows({ ctx }: { ctx: LandContext }) {
   const muni = ctx.where?.results.find((r) => r.layer === "municipalities");
   const treaties = ctx.near?.treaties?.status === "ok" ? ctx.near.treaties.matches : [];
-  const survey = ctx.survey === "addon" ? "addon" : ctx.survey?.results.map((r) => r.name).filter(Boolean) ?? [];
   return (
     <>
       {ctx.unavailable.length ? <Alert><InfoIcon /><AlertTitle>Some map details are unavailable</AlertTitle><AlertDescription>{ctx.unavailable.join(", ")} couldn&apos;t load. Reload the page to try again.</AlertDescription></Alert> : null}
@@ -137,16 +130,6 @@ export function LandRows({ ctx }: { ctx: LandContext }) {
           <Sub>Treaty area</Sub>
         </Row>
       ) : null}
-      <Row icon={<Grid3x3Icon />} action={survey === "addon" ? <Badge variant="outline">legal-land add-on</Badge> : undefined}>
-        {survey === "addon" ? (
-          <span className="text-muted-foreground">Legal land description</span>
-        ) : survey.length ? (
-          <span className="font-mono text-[13px]">{survey[survey.length - 1]}</span>
-        ) : (
-          <span className="text-muted-foreground">{ctx.survey == null ? "Survey grid unavailable" : "No survey grid here"}</span>
-        )}
-        <Sub>{survey === "addon" ? "This key does not include the legal-land add-on" : "Dominion Land Survey"}</Sub>
-      </Row>
     </>
   );
 }

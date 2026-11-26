@@ -3,14 +3,10 @@
 import { createElement, useEffect, useRef, type ComponentType, type ReactNode, type RefObject } from "react";
 import {
   BuildingIcon,
-  FactoryIcon,
-  Grid2x2Icon,
   HouseIcon,
-  LandPlotIcon,
   MapIcon,
   MapPinIcon,
   NavigationIcon,
-  DropletIcon,
   SearchIcon,
   SignpostIcon,
 } from "lucide-react";
@@ -31,16 +27,13 @@ import { cn } from "@/lib/utils";
 
 type Icon = ComponentType<{ className?: string }>;
 
-const LAYER_ICONS: Record<GeocodeResult["layer"], Icon> = {
+/** An icon per civic result kind the gateway returns; any other kind gets the pin. */
+const LAYER_ICONS: Partial<Record<GeocodeResult["layer"], Icon>> = {
   address: HouseIcon,
   street: SignpostIcon,
   locality: BuildingIcon,
   region: MapIcon,
   poi: MapPinIcon,
-  legal_land: Grid2x2Icon,
-  well: DropletIcon,
-  facility: FactoryIcon,
-  parcel: LandPlotIcon,
 };
 
 /** A place's icon is its category chip's when it has one ("Coffee" gets the cup), else the kind's. */

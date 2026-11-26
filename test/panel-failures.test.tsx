@@ -43,23 +43,18 @@ describe("panel failures", () => {
     render(<PlaceOverview sheet="half" onSheet={vi.fn()} place={place} lang="en" />);
     expect(await screen.findByText("Elevation profile unavailable here.")).toBeTruthy();
     expect(screen.getByText("Some map details are unavailable")).toBeTruthy();
-    expect(screen.getByText("No survey grid here")).toBeTruthy();
   });
 
-  it("distinguishes a failed survey request from a location with no grid", async () => {
+  it("names a failed municipality lookup among the unavailable details", async () => {
     vi.mocked(unmap.identify).mockRejectedValue(new Error("Service offline"));
     const context = await landContext([-114, 51], "en", new AbortController().signal);
-    expect(context.survey).toBeNull();
-    expect(context.unavailable).toContain("Legal land grid");
+    expect(context.where).toBeNull();
+    expect(context.unavailable).toContain("Municipality");
   });
 
-  it("keeps the add-on notice separate from failed map details", async () => {
-    vi.mocked(unmap.identify).mockImplementation(async ({ layers }) => {
-      if (layers?.includes("survey.dls")) throw { status: 403 };
-      return { results: [], at: [-114, 51] } as never;
-    });
-    const context = await landContext([-114, 51], "en", new AbortController().signal);
-    expect(context.survey).toBe("addon");
-    expect(context.unavailable).not.toContain("Legal land grid");
+  it("identifies only the municipality, in one call", async () => {
+    await landContext([-114, 51], "en", new AbortController().signal);
+    expect(unmap.identify).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(unmap.identify).mock.calls[0]![0]).toMatchObject({ layers: ["municipalities"] });
   });
 });

@@ -58,7 +58,7 @@ export interface Camera {
 export interface Prefs {
   style: string;
   mapMode: MapMode;
-  /** App layers (`transit`, `roads`) and catalog overlay ids (`treaties`, `survey.dls`, …). */
+  /** App layers (`transit`, `roads`) and catalog overlay ids (`treaties`, `agriculture.crops`, …). */
   layers: string[];
   lang: Lang;
   /** Inspector open or closed; null follows the screen size. */

@@ -72,10 +72,6 @@ const PROVINCES: Record<string, { en: string; fr: string }> = {
 
 const KIND: Partial<Record<GeocodeResult["layer"], { en: string; fr: string }>> = {
   region: { en: "Province or territory", fr: "Province ou territoire" },
-  legal_land: { en: "Legal land description", fr: "Description légale de terrain" },
-  well: { en: "Well", fr: "Puits" },
-  facility: { en: "Energy facility", fr: "Installation énergétique" },
-  parcel: { en: "BC parcel", fr: "Parcelle de la C.-B." },
 };
 
 export interface ResultLines {
@@ -99,10 +95,6 @@ export function resultLines(r: GeocodeResult, lang: Lang): ResultLines {
       const where = [street ? displayCase(street) : null, city].filter(Boolean).join(", ");
       return { primary: r.name, secondary: [categoryLabel(r.category), where].filter(Boolean).join(", ") || null };
     }
-    case "well":
-      return { primary: r.uwi ?? r.name, secondary: [kind, r.operator].filter(Boolean).join(", ") };
-    case "parcel":
-      return { primary: r.pid ? `PID ${r.pid}` : r.name, secondary: [kind, place].filter(Boolean).join(", ") };
     default:
       return { primary: withoutCity(r.name, a.city), secondary: [kind, place].filter(Boolean).join(", ") || null };
   }

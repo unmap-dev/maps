@@ -13,11 +13,11 @@ const layer = (id: string, addon: Layer["addon"], jurisdiction: string[] = ["CA"
 });
 
 describe("overlayGroups", () => {
-  const catalog = [layer("energy.wells", "energy", ["CA-AB"]), layer("municipalities", null), layer("survey.dls", "legalLand", ["CA-AB", "CA-SK"]), layer("new.thing", "future" as Layer["addon"])];
+  const catalog = [layer("mining.occurrences", "mining", ["CA-SK"]), layer("municipalities", null), layer("agriculture.crops", "agriculture", ["CA-AB", "CA-SK"]), layer("new.thing", "future" as Layer["addon"])];
 
   it("lists the app's live layers, then core, then each add-on in a fixed order", () => {
     const groups = overlayGroups(catalog, "en");
-    expect(groups.map((g) => g.id)).toEqual(["live", "core", "legalLand", "energy", "future"]);
+    expect(groups.map((g) => g.id)).toEqual(["live", "core", "agriculture", "mining", "future"]);
     expect(groups[0]!.overlays.map((o) => o.id)).toEqual(["transit", "roads"]);
   });
 
